@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { MarketData } from '../../types/binance';
 import { ArrowUp, ArrowDown } from 'lucide-react';
+import { formatNumber } from '../MarketTable';
 
 interface MarketRowProps {
   item: MarketData;

@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Search } from 'lucide-react';
 import { MarketData } from '../types/binance';
 import { MarketRow } from './market/MarketRow';
 
@@ -13,7 +13,7 @@ interface MarketTableProps {
   data: MarketData[];
 }
 
-const formatNumber = (value: number) => {
+export const formatNumber = (value: number) => {
   if (value >= 1e6) {
     return `${(value / 1e6).toFixed(2)}M`;
   } else if (value >= 1e3) {
@@ -26,7 +26,6 @@ export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'emas' | 'topTrade'>('priceChangePercent');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
-  const prevDataRef = useRef(data);
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -269,4 +268,3 @@ export function MarketTable({ data }: MarketTableProps) {
       </div>
     </div>
   );
-}
