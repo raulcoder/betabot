@@ -10,6 +10,39 @@ export const fetchExchangeInfo = async (): Promise<ExchangeInfo> => {
   return response.data;
 };
 
+const calculateRSI = (prices: number[]): number => {
+  const periods = 14;
+  const changes = [];
+  
+  for (let i = 1; i < prices.length; i++) {
+    changes.push(prices[i] - prices[i - 1]);
+  }
+  
+  let gains = 0;
+  let losses = 0;
+  
+  changes.slice(0, periods).forEach(change => {
+    if (change > 0) gains += change;
+    else losses -= change;
+  });
+  
+  let avgGain = gains / periods;
+  let avgLoss = losses / periods;
+  
+  changes.slice(periods).forEach(change => {
+    if (change > 0) {
+      avgGain = (avgGain * 13 + change) / periods;
+      avgLoss = (avgLoss * 13) / periods;
+    } else {
+      avgGain = (avgGain * 13) / periods;
+      avgLoss = (avgLoss * 13 - change) / periods;
+    }
+  });
+  
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+};
+
 const calculateEMASignal = (price: number, ema50: number, previousEma50: number) => {
   const isAboveEma = price > ema50;
   const isEmaUpTrend = ema50 > previousEma50;
@@ -79,6 +112,7 @@ export const fetch24hTicker = async (): Promise<MarketData[]> => {
         const klines = klinesResponse.data;
         const prices = klines.map((k: any[]) => parseFloat(k[4]));
         
+        const rsi = calculateRSI(prices);
         const price = parseFloat(item.lastPrice);
         const ema50 = prices.reduce((acc: number, p: number) => acc * 0.962 + p * 0.038, prices[0]);
         const prevEma50 = prices.slice(0, -1).reduce((acc: number, p: number) => acc * 0.962 + p * 0.038, prices[0]);
@@ -125,7 +159,7 @@ export const fetch24hTicker = async (): Promise<MarketData[]> => {
           longShortRatio: lsrData[0]?.longShortRatio || null,
           technicalIndicators: {
             macd: parseFloat(item.priceChangePercent) > 0 && parseFloat(item.volume) > 1000000 ? 'bullish' : 'bearish',
-            rsi: 50 + (parseFloat(item.priceChangePercent) / 2),
+            rsi,
             volatility: Math.abs(parseFloat(item.priceChangePercent)),
             ema12: price * 0.98,
             ema26: price * 0.95,
