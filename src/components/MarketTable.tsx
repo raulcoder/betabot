@@ -75,10 +75,14 @@ export function MarketTable({ data }: MarketTableProps) {
                      price > ema12_15m && price > ema26_15m &&
                      price > ema12_1h && price > ema26_1h;
     
+    const isBearish = price < ema12_5m && price < ema26_5m && 
+                     price < ema12_15m && price < ema26_15m &&
+                     price < ema12_1h && price < ema26_1h;
+    
     return {
       price: price.toFixed(2),
       dominance: ((parseFloat(btcDomData.volume) / data.reduce((acc, curr) => acc + parseFloat(curr.volume), 0)) * 100).toFixed(2),
-      status: isBullish ? 'bullish' : 'bearish'
+      status: isBullish ? 'bullish' : isBearish ? 'bearish' : 'neutral'
     };
   };
 
@@ -147,9 +151,15 @@ export function MarketTable({ data }: MarketTableProps) {
               <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
                 btcDominance.status === 'bullish' 
                   ? 'bg-green-100 text-green-600' 
-                  : 'bg-red-100 text-red-600'
+                  : btcDominance.status === 'bearish'
+                  ? 'bg-red-100 text-red-600'
+                  : 'bg-gray-100 text-gray-600'
               }`}>
-                {btcDominance.status === 'bullish' ? '🚀 Bullish' : '🐻 Bearish'}
+                {btcDominance.status === 'bullish' 
+                  ? '🚀 Bullish' 
+                  : btcDominance.status === 'bearish'
+                  ? '🐻 Bearish'
+                  : '⚖️ Neutral'}
               </div>
             </div>
           </div>
