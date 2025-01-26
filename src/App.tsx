@@ -13,22 +13,29 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: true,
       retry: 3,
-      staleTime: 0, // Always fetch fresh data
+      staleTime: 0,
     },
   },
 });
 
 function Dashboard() {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
+  const [isDarkMode, setIsDarkMode] = useState(false); // Alterado para começar em modo claro
   
   const { data: marketData } = useQuery({
     queryKey: ['24hTicker'],
     queryFn: fetch24hTicker,
     refetchInterval: 5000,
   });
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (!savedTheme) {
+      localStorage.setItem('theme', 'light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      setIsDarkMode(savedTheme === 'dark');
+    }
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {

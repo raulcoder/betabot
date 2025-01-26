@@ -72,11 +72,11 @@ export function MarketRow({ item }: MarketRowProps) {
           {parseFloat(item.lastPrice) > (item.technicalIndicators?.ema50 || 0) ? (
             <ArrowUp className="w-4 h-4 text-green-500" />
           ) : (
-            <ArrowDown className="w-4 h-4 text-red-500" />
+            <div className="flex items-center gap-1">
+              <ArrowDown className="w-4 h-4 text-red-500" />
+              <span className="text-red-500 text-sm">BAIXO</span>
+            </div>
           )}
-          <span className="text-gray-600 dark:text-gray-300">
-            {item.technicalIndicators?.ema50 ? 'Acima' : 'Abaixo'}
-          </span>
         </div>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
