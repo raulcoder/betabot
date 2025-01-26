@@ -75,6 +75,7 @@ export function MarketRow({ item }: MarketRowProps) {
     const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
     const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
 
+    // Check if price is above EMAs in both 5m and 15m timeframes
     const above5m = price > ema12_5m && price > ema26_5m;
     const above15m = price > ema12_15m && price > ema26_15m;
 
@@ -90,6 +91,7 @@ export function MarketRow({ item }: MarketRowProps) {
     const ema12_1h = item.technicalIndicators?.ema12_1h || 0;
     const ema26_1h = item.technicalIndicators?.ema26_1h || 0;
 
+    // Check if price is below EMAs in all timeframes (5m, 15m, and 1h)
     const below5m = price < ema12_5m && price < ema26_5m;
     const below15m = price < ema12_15m && price < ema26_15m;
     const below1h = price < ema12_1h && price < ema26_1h;
