@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown } from 'lucide-react';
 import { MarketData } from '../types/binance';
 import { MarketRow } from './market/MarketRow';
 
@@ -36,13 +36,13 @@ export function MarketTable({ data }: MarketTableProps) {
 
   const getTopTrades = (data: MarketData[]) => {
     return data
-      .filter(item => parseFloat(item.volume) > 10000000) // High volume filter
+      .filter(item => parseFloat(item.volume) > 10000000)
       .sort((a, b) => {
         const aTradeCount = parseFloat(a.count || '0');
         const bTradeCount = parseFloat(b.count || '0');
         return bTradeCount - aTradeCount;
       })
-      .slice(0, 5); // Top 5 trades
+      .slice(0, 5);
   };
 
   const getBTCStatus = () => {
@@ -60,14 +60,15 @@ export function MarketTable({ data }: MarketTableProps) {
   };
 
   const getBTCDominance = () => {
-    const btcData = data.find(item => item.symbol === 'BTCUSDT');
-    if (!btcData) return { dominance: '0', status: 'neutral' };
+    const btcDomData = data.find(item => item.symbol === 'BTCDOMUSDT');
+    if (!btcDomData) return { price: '0', dominance: '0', status: 'neutral' };
     
-    const btcVolume = parseFloat(btcData.volume);
+    const btcVolume = parseFloat(btcDomData.volume);
     const totalVolume = data.reduce((acc, curr) => acc + parseFloat(curr.volume), 0);
     const dominance = (btcVolume / totalVolume) * 100;
     
     return {
+      price: parseFloat(btcDomData.lastPrice).toFixed(2),
       dominance: dominance.toFixed(2),
       status: dominance > 50 ? 'bullish' : 'bearish'
     };
@@ -113,46 +114,60 @@ export function MarketTable({ data }: MarketTableProps) {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Market Status Section */}
       <div className="bg-gradient-to-r from-primary-100 to-primary-200 dark:from-gray-800 dark:to-gray-700 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm hover:scale-105 transition-transform duration-300">
-            <div className="text-sm font-medium dark:text-gray-200">Bitcoin</div>
-            <div className={`text-lg font-bold ${btcStatus.status === 'bullish' ? 'text-green-500' : 'text-red-500'}`}>
+          <div className="glass-effect p-4 rounded-lg shadow-sm hover:scale-105 transition-transform duration-300">
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-300">Bitcoin</div>
+            <div className={`text-2xl font-bold ${btcStatus.status === 'bullish' ? 'text-green-500' : 'text-red-500'}`}>
               ${btcStatus.price}
             </div>
-            <div className="text-xs dark:text-gray-300">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Status: {btcStatus.status === 'bullish' ? '🚀 Bullish' : '🐻 Bearish'}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm hover:scale-105 transition-transform duration-300">
-            <div className="text-sm font-medium dark:text-gray-200">BTC Dominance</div>
-            <div className={`text-lg font-bold ${btcDominance.status === 'bullish' ? 'text-green-500' : 'text-red-500'}`}>
-              {btcDominance.dominance}%
+          <div className="glass-effect p-4 rounded-lg shadow-sm hover:scale-105 transition-transform duration-300">
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-300">BTC Dominance</div>
+            <div className={`text-2xl font-bold ${btcDominance.status === 'bullish' ? 'text-green-500' : 'text-red-500'}`}>
+              ${btcDominance.price}
             </div>
-            <div className="text-xs dark:text-gray-300">
-              Status: {btcDominance.status === 'bullish' ? '🚀 Bullish' : '🐻 Bearish'}
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Dominância: {btcDominance.dominance}%
             </div>
           </div>
         </div>
 
-        <h3 className="text-lg font-semibold mb-2 dark:text-gray-200">Top Trades</h3>
+        <h3 className="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-200">Top Trades</h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {topTrades.map((trade) => (
-            <div key={trade.symbol} className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm hover:scale-105 transition-transform duration-300">
-              <div className="font-medium dark:text-gray-200">{trade.symbol.replace('USDT', '')}</div>
-              <div className={`text-sm ${parseFloat(trade.priceChangePercent) > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {parseFloat(trade.priceChangePercent).toFixed(2)}%
+          {topTrades.map((trade) => {
+            const lsRatio = parseFloat(trade.longShortRatio || '1.0');
+            const isLongDominant = lsRatio > 1.0;
+            
+            return (
+              <div key={trade.symbol} className="glass-effect p-4 rounded-lg shadow-sm hover:scale-105 transition-transform duration-300">
+                <div className="font-medium text-gray-700 dark:text-gray-200">{trade.symbol.replace('USDT', '')}</div>
+                <div className={`text-lg font-bold ${parseFloat(trade.priceChangePercent) > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {parseFloat(trade.priceChangePercent).toFixed(2)}%
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Trades: {trade.count || '0'}
+                </div>
+                <div className="flex items-center gap-1 mt-2 text-xs">
+                  {isLongDominant ? (
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-500" />
+                  )}
+                  <span className={isLongDominant ? 'text-green-500' : 'text-red-500'}>
+                    L/S: {lsRatio.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-300">
-                Trades: {trade.count || '0'}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 glass-effect">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
