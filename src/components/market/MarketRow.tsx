@@ -92,11 +92,14 @@ export function MarketRow({ item }: MarketRowProps) {
     const ema26_5m = item.technicalIndicators?.ema26_5m || 0;
     const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
     const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
+    const ema12_1h = item.technicalIndicators?.ema12_1h || 0;
+    const ema26_1h = item.technicalIndicators?.ema26_1h || 0;
 
     const below5m = price < ema12_5m && price < ema26_5m;
     const below15m = price < ema12_15m && price < ema26_15m;
+    const below1h = price < ema12_1h && price < ema26_1h;
 
-    return below5m && below15m;
+    return below5m && below15m && below1h;
   };
 
   return (
@@ -120,7 +123,7 @@ export function MarketRow({ item }: MarketRowProps) {
             <ArrowDown className="w-4 h-4 text-red-500" />
           )}
           <span className={priceChange > 0 ? 'text-green-500' : 'text-red-500'}>
-            {priceChange > 0 ? '+' : '-'}{Math.abs(priceChange).toFixed(2)}%
+            {item.priceChangePercent}
           </span>
         </div>
       </td>
@@ -145,11 +148,12 @@ export function MarketRow({ item }: MarketRowProps) {
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center gap-1">
-          {isAboveEMAs() ? (
+          {isAboveEMAs() && (
             <ArrowUp className="w-4 h-4 text-green-500" />
-          ) : isBelowEMAs() ? (
+          )}
+          {isBelowEMAs() && (
             <ArrowDown className="w-4 h-4 text-red-500" />
-          ) : null}
+          )}
         </div>
       </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(lsrAnimation)}`}>
