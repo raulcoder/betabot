@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
 });
 
 function Dashboard() {
-  const [isDarkMode, setIsDarkMode] = useState(false); // Alterado para começar em modo claro
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   const { data: marketData } = useQuery({
     queryKey: ['24hTicker'],
@@ -42,6 +42,9 @@ function Dashboard() {
       localStorage.setItem('theme', 'light');
     }
   };
+
+  const btcDomData = marketData?.find((item: any) => item.symbol === 'BTCDOMUSDT');
+  const btcDomPrice = btcDomData ? parseFloat(btcDomData.lastPrice).toFixed(2) : '0.00';
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300`}>
@@ -79,8 +82,13 @@ function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="space-y-6 animate-fade-in">
+          <div className="glass-effect p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300">
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">BTC Dominance</div>
+            <div className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+              ${btcDomPrice}
+            </div>
+          </div>
           <NewListingAlert />
-          
           <div className="gradient-border">
             <div className="p-4 sm:p-6">
               <MarketTable data={marketData || []} />
