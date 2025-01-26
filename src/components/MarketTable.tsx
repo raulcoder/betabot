@@ -108,7 +108,7 @@ export function MarketTable({ data }: MarketTableProps) {
                   ${btcStatus.price}
                 </div>
                 <div className={`text-sm ${parseFloat(btcStatus.change24h) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  24h: {parseFloat(btcStatus.change24h) >= 0 ? '+' : ''}{btcStatus.change24h}%
+                  24h: {formatPriceChange(parseFloat(btcStatus.change24h))}
                 </div>
               </div>
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
@@ -178,7 +178,7 @@ export function MarketTable({ data }: MarketTableProps) {
                 className="glass-effect p-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 animate-fade-in">
                 <div className="font-medium text-gray-700 dark:text-gray-200 mb-2">{trade.symbol.replace('USDT', '')}</div>
                 <div className={`text-lg font-bold ${parseFloat(trade.priceChangePercent) > 0 ? 'text-green-500' : 'text-red-500'} mb-2`}>
-                  {parseFloat(trade.priceChangePercent).toFixed(2)}%
+                  {formatPriceChange(parseFloat(trade.priceChangePercent))}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                   Trades: {formatNumber(tradeCount)}
@@ -266,7 +266,10 @@ export function MarketTable({ data }: MarketTableProps) {
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredData.map((item) => (
-              <MarketRow key={item.symbol} item={item} />
+              <MarketRow key={item.symbol} item={{
+                ...item,
+                priceChangePercent: formatPriceChange(parseFloat(item.priceChangePercent))
+              }} />
             ))}
           </tbody>
         </table>
