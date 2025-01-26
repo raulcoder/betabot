@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Search } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import { MarketData } from '../types/binance';
 import { MarketRow } from './market/MarketRow';
 
@@ -23,7 +23,7 @@ export const formatNumber = (value: number) => {
 };
 
 export function MarketTable({ data }: MarketTableProps) {
-  const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
+  const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd'>('priceChangePercent');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -174,6 +174,20 @@ export function MarketTable({ data }: MarketTableProps) {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Top 5 Most Traded</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {topTrades.map((trade) => (
+              <div key={trade.symbol} className="bg-white/10 dark:bg-gray-800/50 p-4 rounded-lg backdrop-blur-sm">
+                <div className="font-medium text-gray-700 dark:text-gray-200">{trade.symbol.replace('USDT', '')}</div>
+                <div className={`text-sm ${parseFloat(trade.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {formatPriceChange(parseFloat(trade.priceChangePercent))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

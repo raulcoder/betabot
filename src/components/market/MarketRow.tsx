@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { MarketData } from '../../types/binance';
-import { ArrowUp, ArrowDown, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface MarketRowProps {
   item: MarketData;
@@ -61,10 +61,10 @@ export function MarketRow({ item }: MarketRowProps) {
     return 'text-gray-200';
   };
 
-  const getSignalIcon = (signal: string) => {
-    if (signal === 'bullish') return <TrendingUp className="w-4 h-4 text-green-500" />;
-    if (signal === 'bearish') return <TrendingDown className="w-4 h-4 text-red-500" />;
-    return null;
+  const getSignalColor = (signal: string) => {
+    if (signal === 'bullish') return 'text-green-500';
+    if (signal === 'bearish') return 'text-red-500';
+    return 'text-gray-400'; // neutral in gray
   };
 
   const getAnimationClass = (type: 'none' | 'up' | 'down') => {
@@ -73,49 +73,15 @@ export function MarketRow({ item }: MarketRowProps) {
     return '';
   };
 
-  const isAboveEMAs = () => {
-    const price = parseFloat(item.lastPrice);
-    const ema12_5m = item.technicalIndicators?.ema12_5m || 0;
-    const ema26_5m = item.technicalIndicators?.ema26_5m || 0;
-    const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
-    const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
-
-    // Check if price is above EMAs in both 5m and 15m timeframes
-    const above5m = price > ema12_5m && price > ema26_5m;
-    const above15m = price > ema12_15m && price > ema26_15m;
-
-    return above5m && above15m;
-  };
-
-  const isBelowEMAs = () => {
-    const price = parseFloat(item.lastPrice);
-    const ema12_5m = item.technicalIndicators?.ema12_5m || 0;
-    const ema26_5m = item.technicalIndicators?.ema26_5m || 0;
-    const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
-    const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
-    const ema12_1h = item.technicalIndicators?.ema12_1h || 0;
-    const ema26_1h = item.technicalIndicators?.ema26_1h || 0;
-
-    // Check if price is below EMAs in all timeframes (5m, 15m, and 1h)
-    const below5m = price < ema12_5m && price < ema26_5m;
-    const below15m = price < ema12_15m && price < ema26_15m;
-    const below1h = price < ema12_1h && price < ema26_1h;
-
-    return below5m && below15m && below1h;
-  };
-
   return (
     <tr className="hover:bg-gray-50/10 transition-colors text-gray-200">
       <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium">
         {item.symbol.replace('USDT', '')}
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
-        <div className="flex items-center gap-2">
-          {getSignalIcon(item.technicalIndicators?.iaSignal || '')}
-          <span className={item.technicalIndicators?.iaSignal === 'bullish' ? 'text-green-500' : 'text-red-500'}>
-            {item.technicalIndicators?.iaSignal || '-'}
-          </span>
-        </div>
+        <span className={getSignalColor(item.technicalIndicators?.iaSignal || '')}>
+          {item.technicalIndicators?.iaSignal || '-'}
+        </span>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center gap-1">
@@ -141,22 +107,9 @@ export function MarketRow({ item }: MarketRowProps) {
         </div>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
-        <div className="flex items-center gap-2">
-          {getSignalIcon(item.technicalIndicators?.macd || '')}
-          <span className={item.technicalIndicators?.macd === 'bullish' ? 'text-green-500' : 'text-red-500'}>
-            {item.technicalIndicators?.macd || '-'}
-          </span>
-        </div>
-      </td>
-      <td className="px-2 sm:px-4 py-2 sm:py-3">
-        <div className="flex items-center gap-1">
-          {isAboveEMAs() && (
-            <ArrowUp className="w-4 h-4 text-green-500" />
-          )}
-          {isBelowEMAs() && (
-            <ArrowDown className="w-4 h-4 text-red-500" />
-          )}
-        </div>
+        <span className={getSignalColor(item.technicalIndicators?.macd || '')}>
+          {item.technicalIndicators?.macd || '-'}
+        </span>
       </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(lsrAnimation)}`}>
         <span className="text-gray-200">
