@@ -91,6 +91,11 @@ export function MarketTable({ data }: MarketTableProps) {
   const btcStatus = getBTCStatus();
   const btcDominance = getBTCDominance();
 
+  const formatPriceChange = (change: number) => {
+    const absChange = Math.abs(change);
+    return change >= 0 ? `+${absChange.toFixed(2)}%` : `-${absChange.toFixed(2)}%`;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-gradient-to-br from-primary-100/50 to-primary-200/50 dark:from-gray-800/50 dark:to-gray-700/50 p-6 rounded-2xl shadow-xl backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
