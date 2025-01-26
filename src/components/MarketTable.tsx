@@ -16,6 +16,14 @@ interface MarketTableProps {
 type SortField = 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'emas' | 'topTrade';
 type SortDirection = 'asc' | 'desc';
 
+const getTopTrades = (data: MarketData[]) => {
+  return data
+    .filter(item => item.symbol.endsWith('USDT'))
+    .filter(item => !DELISTED_TOKENS.includes(item.symbol))
+    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
+    .slice(0, 5);
+};
+
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<SortField>('priceChangePercent');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
