@@ -46,32 +46,54 @@ export function MarketTable({ data }: MarketTableProps) {
     if (!btcData) return { price: '0', status: 'neutral', change24h: '0' };
     
     const price = parseFloat(btcData.lastPrice);
-    const ema12 = btcData.technicalIndicators?.ema12 || 0;
-    const ema26 = btcData.technicalIndicators?.ema26 || 0;
+    const ema12_5m = btcData.technicalIndicators?.ema12_5m || 0;
+    const ema26_5m = btcData.technicalIndicators?.ema26_5m || 0;
+    const ema12_15m = btcData.technicalIndicators?.ema12_15m || 0;
+    const ema26_15m = btcData.technicalIndicators?.ema26_15m || 0;
+    const ema12_1h = btcData.technicalIndicators?.ema12_1h || 0;
+    const ema26_1h = btcData.technicalIndicators?.ema26_1h || 0;
     const change24h = parseFloat(btcData.priceChangePercent);
+    
+    const above5m = price > ema12_5m && price > ema26_5m;
+    const above15m = price > ema12_15m && price > ema26_15m;
+    const above1h = price > ema12_1h && price > ema26_1h;
+    
+    const below5m = price < ema12_5m && price < ema26_5m;
+    const below15m = price < ema12_15m && price < ema26_15m;
+    const below1h = price < ema12_1h && price < ema26_1h;
     
     return {
       price: price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      status: price > ema12 && price > ema26 ? 'bullish' : price < ema12 && price < ema26 ? 'bearish' : 'neutral',
-      direction: price > ema12 && price > ema26 ? 'CIMA' : price < ema12 && price < ema26 ? 'BAIXO' : 'NEUTRAL',
+      status: above5m && above15m && above1h ? 'bullish' : below5m && below15m && below1h ? 'bearish' : 'neutral',
       change24h: change24h.toFixed(2)
     };
   };
 
   const getBTCDominance = () => {
     const btcDomData = data.find(item => item.symbol === 'BTCDOMUSDT');
-    if (!btcDomData) return { price: '0', dominance: '0', status: 'neutral', direction: '' };
+    if (!btcDomData) return { price: '0', status: 'neutral', change24h: '0' };
     
     const price = parseFloat(btcDomData.lastPrice);
-    const volume = parseFloat(btcDomData.volume);
-    const totalVolume = data.reduce((acc, curr) => acc + parseFloat(curr.volume), 0);
-    const dominancePercentage = (volume / totalVolume) * 100;
+    const ema12_5m = btcDomData.technicalIndicators?.ema12_5m || 0;
+    const ema26_5m = btcDomData.technicalIndicators?.ema26_5m || 0;
+    const ema12_15m = btcDomData.technicalIndicators?.ema12_15m || 0;
+    const ema26_15m = btcDomData.technicalIndicators?.ema26_15m || 0;
+    const ema12_1h = btcDomData.technicalIndicators?.ema12_1h || 0;
+    const ema26_1h = btcDomData.technicalIndicators?.ema26_1h || 0;
+    const change24h = parseFloat(btcDomData.priceChangePercent);
+    
+    const above5m = price > ema12_5m && price > ema26_5m;
+    const above15m = price > ema12_15m && price > ema26_15m;
+    const above1h = price > ema12_1h && price > ema26_1h;
+    
+    const below5m = price < ema12_5m && price < ema26_5m;
+    const below15m = price < ema12_15m && price < ema26_15m;
+    const below1h = price < ema12_1h && price < ema26_1h;
     
     return {
       price: price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      dominance: dominancePercentage.toFixed(2),
-      status: btcDomData.technicalIndicators?.iaSignal || 'neutral',
-      direction: btcDomData.technicalIndicators?.iaSignal === 'bullish' ? 'CIMA' : btcDomData.technicalIndicators?.iaSignal === 'bearish' ? 'BAIXO' : 'NEUTRAL'
+      status: above5m && above15m && above1h ? 'bullish' : below5m && below15m && below1h ? 'bearish' : 'neutral',
+      change24h: change24h.toFixed(2)
     };
   };
 
@@ -132,8 +154,8 @@ export function MarketTable({ data }: MarketTableProps) {
                 <div className={`text-3xl font-bold ${btcDominance.status === 'bullish' ? 'text-green-500' : btcDominance.status === 'bearish' ? 'text-red-500' : 'text-gray-500'} mb-2`}>
                   ${btcDominance.price}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">
-                  Dominância: {btcDominance.dominance}%
+                <div className={`text-sm ${parseFloat(btcDominance.change24h) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  24h: {formatPriceChange(parseFloat(btcDominance.change24h))}
                 </div>
               </div>
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
