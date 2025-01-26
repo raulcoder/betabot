@@ -35,6 +35,12 @@ export interface TechnicalIndicators {
   ema12: number;
   ema26: number;
   ema50: number;
+  ema12_5m: number;
+  ema26_5m: number;
+  ema12_15m: number;
+  ema26_15m: number;
+  ema12_1h: number;
+  ema26_1h: number;
   ichimoku: {
     tenkanSen: number;
     kijunSen: number;
