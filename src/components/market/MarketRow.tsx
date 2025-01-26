@@ -50,23 +50,6 @@ export function MarketRow({ item }: MarketRowProps) {
     };
   }, [item]);
 
-  const priceChange = parseFloat(item.priceChangePercent);
-  const rsi = item.technicalIndicators?.rsi || 0;
-  const volume = parseFloat(item.volume);
-  const formattedVolume = volume >= 1e6 ? `${(volume / 1e6).toFixed(2)}M` : volume.toFixed(2);
-
-  const getRSIColor = (value: number) => {
-    if (value >= 70) return 'text-red-500';
-    if (value <= 30) return 'text-green-500';
-    return 'text-gray-200';
-  };
-
-  const getSignalIcon = (signal: string) => {
-    if (signal === 'bullish') return <TrendingUp className="w-4 h-4 text-green-500" />;
-    if (signal === 'bearish') return <TrendingDown className="w-4 h-4 text-red-500" />;
-    return null;
-  };
-
   const getAnimationClass = (type: 'none' | 'up' | 'down') => {
     if (type === 'up') return 'animate-blink-green';
     if (type === 'down') return 'animate-blink-red';
@@ -80,6 +63,7 @@ export function MarketRow({ item }: MarketRowProps) {
     const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
     const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
 
+    // Check if price is above EMAs in both 5m and 15m timeframes
     const above5m = price > ema12_5m && price > ema26_5m;
     const above15m = price > ema12_15m && price > ema26_15m;
 
@@ -95,6 +79,7 @@ export function MarketRow({ item }: MarketRowProps) {
     const ema12_1h = item.technicalIndicators?.ema12_1h || 0;
     const ema26_1h = item.technicalIndicators?.ema26_1h || 0;
 
+    // Check if price is below EMAs in all timeframes (5m, 15m, and 1h)
     const below5m = price < ema12_5m && price < ema26_5m;
     const below15m = price < ema12_15m && price < ema26_15m;
     const below1h = price < ema12_1h && price < ema26_1h;
