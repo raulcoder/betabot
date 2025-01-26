@@ -146,16 +146,6 @@ export function MarketRow({ item }: MarketRowProps) {
           </span>
         </div>
       </td>
-      <td className="px-2 sm:px-4 py-2 sm:py-3">
-        <div className="flex items-center gap-1">
-          {isAboveEMAs() && (
-            <ArrowUp className="w-4 h-4 text-green-500" />
-          )}
-          {isBelowEMAs() && (
-            <ArrowDown className="w-4 h-4 text-red-500" />
-          )}
-        </div>
-      </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(lsrAnimation)}`}>
         <span className="text-gray-200">
           {item.longShortRatio ? parseFloat(item.longShortRatio).toFixed(2) : '-'}
