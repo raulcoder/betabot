@@ -4,7 +4,6 @@ import { MarketTable } from './components/MarketTable';
 import { NewListingAlert } from './components/NewListingAlert';
 import { LanguageSelector } from './components/LanguageSelector';
 import { PromoPopup } from './components/PromoPopup';
-import { LoadingScreen } from './components/LoadingScreen';
 import { Activity, Sun, Moon } from 'lucide-react';
 import { useQuery } from 'react-query';
 import { useState, useEffect } from 'react';
@@ -42,10 +41,8 @@ function Dashboard() {
   };
 
   return (
-    <>
-      <LoadingScreen />
-      <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-all duration-300`}>
-        <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-800/50">
+    <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-all duration-300`}>
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center">
@@ -75,24 +72,23 @@ function Dashboard() {
             </div>
           </div>
         </div>
-        </header>
+      </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 animate-fade-in">
-          <NewListingAlert />
-          <MarketTable data={marketData || []} />
-        </main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 animate-fade-in">
+        <NewListingAlert />
+        <MarketTable data={marketData || []} />
+      </main>
 
-        <footer className="mt-12 py-6 bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg border-t border-gray-200/50 dark:border-gray-800/50">
+      <footer className="mt-12 py-6 bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg border-t border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             © {new Date().getFullYear()} Beta Bot. Dados fornecidos por Binance Futures.
           </div>
         </div>
-        </footer>
+      </footer>
 
-        <PromoPopup />
-      </div>
-    </>
+      <PromoPopup />
+    </div>
   );
 }
 

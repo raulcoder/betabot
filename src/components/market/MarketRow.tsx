@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { MarketData } from '../../types/binance';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface MarketRowProps {
   item: MarketData;
@@ -50,21 +50,16 @@ export function MarketRow({ item }: MarketRowProps) {
     };
   }, [item]);
 
-  const priceChange = parseFloat(item.priceChangePercent);
-  const rsi = item.technicalIndicators?.rsi || 0;
-  const volume = parseFloat(item.volume);
-  const formattedVolume = volume >= 1e6 ? `${(volume / 1e6).toFixed(2)}M` : volume.toFixed(2);
+  const getSignalIcon = (signal: string) => {
+    if (signal === 'bullish') return <TrendingUp className="w-4 h-4 text-green-500" />;
+    if (signal === 'bearish') return <TrendingDown className="w-4 h-4 text-red-500" />;
+    return null;
+  };
 
   const getRSIColor = (value: number) => {
     if (value >= 70) return 'text-red-500';
     if (value <= 30) return 'text-green-500';
     return 'text-gray-200';
-  };
-
-  const getSignalColor = (signal: string) => {
-    if (signal === 'bullish') return 'text-green-500';
-    if (signal === 'bearish') return 'text-red-500';
-    return 'text-gray-400'; // neutral in gray
   };
 
   const getAnimationClass = (type: 'none' | 'up' | 'down') => {
@@ -73,15 +68,23 @@ export function MarketRow({ item }: MarketRowProps) {
     return '';
   };
 
+  const priceChange = parseFloat(item.priceChangePercent);
+  const rsi = item.technicalIndicators?.rsi || 0;
+  const volume = parseFloat(item.volume);
+  const formattedVolume = volume >= 1e6 ? `${(volume / 1e6).toFixed(2)}M` : volume.toFixed(2);
+
   return (
     <tr className="hover:bg-gray-50/10 transition-colors text-gray-200">
       <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium">
         {item.symbol.replace('USDT', '')}
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
-        <span className={getSignalColor(item.technicalIndicators?.iaSignal || '')}>
-          {item.technicalIndicators?.iaSignal || '-'}
-        </span>
+        <div className="flex items-center gap-2">
+          {getSignalIcon(item.technicalIndicators?.iaSignal || '')}
+          <span className={item.technicalIndicators?.iaSignal === 'bullish' ? 'text-green-500' : 'text-red-500'}>
+            {item.technicalIndicators?.iaSignal || '-'}
+          </span>
+        </div>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center gap-1">
@@ -107,9 +110,12 @@ export function MarketRow({ item }: MarketRowProps) {
         </div>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
-        <span className={getSignalColor(item.technicalIndicators?.macd || '')}>
-          {item.technicalIndicators?.macd || '-'}
-        </span>
+        <div className="flex items-center gap-2">
+          {getSignalIcon(item.technicalIndicators?.macd || '')}
+          <span className={item.technicalIndicators?.macd === 'bullish' ? 'text-green-500' : 'text-red-500'}>
+            {item.technicalIndicators?.macd || '-'}
+          </span>
+        </div>
       </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(lsrAnimation)}`}>
         <span className="text-gray-200">
