@@ -54,17 +54,24 @@ export function MarketTable({ data }: MarketTableProps) {
     const ema26_1h = btcData.technicalIndicators?.ema26_1h || 0;
     const change24h = parseFloat(btcData.priceChangePercent);
     
+    // Check if price is above EMAs in all timeframes
     const above5m = price > ema12_5m && price > ema26_5m;
     const above15m = price > ema12_15m && price > ema26_15m;
     const above1h = price > ema12_1h && price > ema26_1h;
     
+    // Check if price is below EMAs in all timeframes
     const below5m = price < ema12_5m && price < ema26_5m;
     const below15m = price < ema12_15m && price < ema26_15m;
     const below1h = price < ema12_1h && price < ema26_1h;
     
+    // Only return bullish if above ALL timeframes, bearish if below ALL timeframes
+    const status = above5m && above15m && above1h ? 'bullish' : 
+                  below5m && below15m && below1h ? 'bearish' : 
+                  'neutral';
+    
     return {
       price: price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      status: above5m && above15m && above1h ? 'bullish' : below5m && below15m && below1h ? 'bearish' : 'neutral',
+      status,
       change24h: change24h.toFixed(2)
     };
   };
