@@ -52,29 +52,55 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 .glass-effect {
-  @apply bg-white/10 backdrop-blur-lg border border-white/20;
+  @apply bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300;
 }
 
 .gradient-border {
-  @apply relative rounded-lg p-[1px] bg-gradient-to-r from-primary-400 to-primary-600 overflow-hidden;
+  @apply relative rounded-xl p-[1px] bg-gradient-to-r from-primary-400 to-primary-600 overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300;
 }
 
 .gradient-border > * {
-  @apply bg-white dark:bg-gray-900 rounded-lg;
+  @apply bg-white dark:bg-gray-900 rounded-xl;
 }
 
 .hover-scale {
-  @apply transition-transform duration-200 hover:scale-105;
+  @apply transform transition-all duration-300 hover:scale-105;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
 }
 
 /* Enhanced dark mode text styles */
@@ -100,4 +126,26 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white/50 dark:bg-gray-900/50 backdrop-blur-lg rounded-xl border border-gray-200 dark:border-gray-800 shadow-lg hover:shadow-xl transition-all duration-300;
+}
+
+/* Table styles */
+.table-container {
+  @apply overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800;
+}
+
+.table-header {
+  @apply bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider;
+}
+
+.table-cell {
+  @apply px-4 py-3 whitespace-nowrap;
+}
+
+.table-row {
+  @apply hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors;
 }
