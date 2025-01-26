@@ -58,7 +58,7 @@ export function MarketRow({ item }: MarketRowProps) {
   const getRSIColor = (value: number) => {
     if (value >= 70) return 'text-red-500';
     if (value <= 30) return 'text-green-500';
-    return 'text-gray-600';
+    return 'text-gray-200';
   };
 
   const getSignalIcon = (signal: string) => {
@@ -73,8 +73,21 @@ export function MarketRow({ item }: MarketRowProps) {
     return '';
   };
 
+  const isAboveEMAs = () => {
+    const price = parseFloat(item.lastPrice);
+    const ema12_5m = item.technicalIndicators?.ema12_5m || 0;
+    const ema26_5m = item.technicalIndicators?.ema26_5m || 0;
+    const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
+    const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
+
+    const above5m = price > ema12_5m && price > ema26_5m;
+    const above15m = price > ema12_15m && price > ema26_15m;
+
+    return above5m && above15m;
+  };
+
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
+    <tr className="hover:bg-gray-50/10 transition-colors text-gray-200">
       <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium">
         {item.symbol.replace('USDT', '')}
       </td>
@@ -94,14 +107,14 @@ export function MarketRow({ item }: MarketRowProps) {
             <ArrowDown className="w-4 h-4 text-red-500" />
           )}
           <span className={priceChange > 0 ? 'text-green-500' : 'text-red-500'}>
-            {Math.abs(priceChange).toFixed(2)}%
+            {priceChange > 0 ? '+' : '-'}{Math.abs(priceChange).toFixed(2)}%
           </span>
         </div>
       </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 font-medium ${getAnimationClass(priceAnimation)}`}>
         ${parseFloat(item.lastPrice).toFixed(4)}
       </td>
-      <td className={`px-2 sm:px-4 py-2 sm:py-3 text-gray-600 ${getAnimationClass(volumeAnimation)}`}>
+      <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(volumeAnimation)}`}>
         ${formattedVolume}
       </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(rsiAnimation)}`}>
@@ -119,7 +132,7 @@ export function MarketRow({ item }: MarketRowProps) {
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center gap-1">
-          {parseFloat(item.lastPrice) > (item.technicalIndicators?.ema50 || 0) ? (
+          {isAboveEMAs() ? (
             <ArrowUp className="w-4 h-4 text-green-500" />
           ) : (
             <ArrowDown className="w-4 h-4 text-red-500" />
@@ -127,7 +140,7 @@ export function MarketRow({ item }: MarketRowProps) {
         </div>
       </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(lsrAnimation)}`}>
-        <span className="text-gray-600">
+        <span className="text-gray-200">
           {item.longShortRatio ? parseFloat(item.longShortRatio).toFixed(2) : '-'}
         </span>
       </td>
