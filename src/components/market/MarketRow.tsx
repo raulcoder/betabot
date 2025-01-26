@@ -68,6 +68,35 @@ export function MarketRow({ item }: MarketRowProps) {
     return '';
   };
 
+  const isAboveEMAs = () => {
+    const price = parseFloat(item.lastPrice);
+    const ema12_5m = item.technicalIndicators?.ema12_5m || 0;
+    const ema26_5m = item.technicalIndicators?.ema26_5m || 0;
+    const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
+    const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
+
+    const above5m = price > ema12_5m && price > ema26_5m;
+    const above15m = price > ema12_15m && price > ema26_15m;
+
+    return above5m && above15m;
+  };
+
+  const isBelowEMAs = () => {
+    const price = parseFloat(item.lastPrice);
+    const ema12_5m = item.technicalIndicators?.ema12_5m || 0;
+    const ema26_5m = item.technicalIndicators?.ema26_5m || 0;
+    const ema12_15m = item.technicalIndicators?.ema12_15m || 0;
+    const ema26_15m = item.technicalIndicators?.ema26_15m || 0;
+    const ema12_1h = item.technicalIndicators?.ema12_1h || 0;
+    const ema26_1h = item.technicalIndicators?.ema26_1h || 0;
+
+    const below5m = price < ema12_5m && price < ema26_5m;
+    const below15m = price < ema12_15m && price < ema26_15m;
+    const below1h = price < ema12_1h && price < ema26_1h;
+
+    return below5m && below15m && below1h;
+  };
+
   const priceChange = parseFloat(item.priceChangePercent);
   const rsi = item.technicalIndicators?.rsi || 0;
   const volume = parseFloat(item.volume);
@@ -115,6 +144,16 @@ export function MarketRow({ item }: MarketRowProps) {
           <span className={item.technicalIndicators?.macd === 'bullish' ? 'text-green-500' : 'text-red-500'}>
             {item.technicalIndicators?.macd || '-'}
           </span>
+        </div>
+      </td>
+      <td className="px-2 sm:px-4 py-2 sm:py-3">
+        <div className="flex items-center gap-1">
+          {isAboveEMAs() && (
+            <ArrowUp className="w-4 h-4 text-green-500" />
+          )}
+          {isBelowEMAs() && (
+            <ArrowDown className="w-4 h-4 text-red-500" />
+          )}
         </div>
       </td>
       <td className={`px-2 sm:px-4 py-2 sm:py-3 ${getAnimationClass(lsrAnimation)}`}>
