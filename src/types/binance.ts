@@ -50,9 +50,11 @@ export interface MarketData {
   priceChangePercent: string;
   lastPrice: string;
   volume: string;
-  count?: string; // Added count for number of trades
+  count?: string;
   longShortRatio?: string;
   technicalIndicators?: TechnicalIndicators;
   volatility?: string;
   rsi?: string;
+  emaStatus?: 'acima' | 'abaixo';
+  btcDominance?: string;
 }
