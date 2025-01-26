@@ -101,6 +101,12 @@ export function MarketTable({ data }: MarketTableProps) {
     };
   };
 
+  const topTrades = data
+    .filter(item => item.symbol.endsWith('USDT'))
+    .filter(item => !DELISTED_TOKENS.includes(item.symbol))
+    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
+    .slice(0, 5);
+
   const filteredData = data
     .filter(item => item.symbol.endsWith('USDT'))
     .filter(item => !DELISTED_TOKENS.includes(item.symbol))
@@ -109,10 +115,6 @@ export function MarketTable({ data }: MarketTableProps) {
       const rsi = item.technicalIndicators?.rsi || 0;
       return rsi > 0;
     });
-
-  const topTrades = filteredData
-    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
-    .slice(0, 5);
 
   const btcStatus = getBTCStatus();
   const btcDominance = getBTCDominance();
@@ -185,6 +187,12 @@ export function MarketTable({ data }: MarketTableProps) {
                 <div className="font-medium text-gray-700 dark:text-gray-200">{trade.symbol.replace('USDT', '')}</div>
                 <div className={`text-sm ${parseFloat(trade.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {formatPriceChange(parseFloat(trade.priceChangePercent))}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Trades: {parseInt(trade.count || '0').toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500">
+                  L/S: {parseFloat(trade.longShortRatio || '1.0').toFixed(2)}
                 </div>
               </div>
             ))}
