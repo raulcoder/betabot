@@ -50,6 +50,23 @@ export function MarketRow({ item }: MarketRowProps) {
     };
   }, [item]);
 
+  const priceChange = parseFloat(item.priceChangePercent);
+  const rsi = item.technicalIndicators?.rsi || 0;
+  const volume = parseFloat(item.volume);
+  const formattedVolume = volume >= 1e6 ? `${(volume / 1e6).toFixed(2)}M` : volume.toFixed(2);
+
+  const getRSIColor = (value: number) => {
+    if (value >= 70) return 'text-red-500';
+    if (value <= 30) return 'text-green-500';
+    return 'text-gray-200';
+  };
+
+  const getSignalIcon = (signal: string) => {
+    if (signal === 'bullish') return <TrendingUp className="w-4 h-4 text-green-500" />;
+    if (signal === 'bearish') return <TrendingDown className="w-4 h-4 text-red-500" />;
+    return null;
+  };
+
   const getAnimationClass = (type: 'none' | 'up' | 'down') => {
     if (type === 'up') return 'animate-blink-green';
     if (type === 'down') return 'animate-blink-red';
