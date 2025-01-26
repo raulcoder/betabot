@@ -28,24 +28,21 @@ function Dashboard() {
   });
 
   useEffect(() => {
-    localStorage.setItem('theme', 'light');
-    document.documentElement.classList.remove('dark');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setIsDarkMode(savedTheme === 'dark');
+    document.documentElement.classList.toggle('dark', savedTheme === 'dark');
   }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
-    if (!isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    const newTheme = !isDarkMode ? 'dark' : 'light';
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', !isDarkMode);
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-all duration-300 ${isDarkMode ? 'dark' : ''}`}>
-      <header className="sticky top-0 z-10 backdrop-blur-lg bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800">
+    <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-all duration-300`}>
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center">
@@ -79,15 +76,10 @@ function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 animate-fade-in">
         <NewListingAlert />
-        
-        <div className="rounded-xl overflow-hidden bg-white/50 dark:bg-gray-900/50 backdrop-blur-lg border border-gray-200 dark:border-gray-800 shadow-lg hover:shadow-xl transition-all duration-300">
-          <div className="p-4 sm:p-6">
-            <MarketTable data={marketData || []} />
-          </div>
-        </div>
+        <MarketTable data={marketData || []} />
       </main>
 
-      <footer className="mt-12 py-6 bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800">
+      <footer className="mt-12 py-6 bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg border-t border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             © {new Date().getFullYear()} Beta Bot. Dados fornecidos por Binance Futures.

@@ -13,27 +13,12 @@ interface MarketTableProps {
   data: MarketData[];
 }
 
-type SortField = 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'emas' | 'topTrade';
-type SortDirection = 'asc' | 'desc';
-
-const getTopTrades = (data: MarketData[]) => {
-  return data
-    .filter(item => item.symbol.endsWith('USDT'))
-    .filter(item => !DELISTED_TOKENS.includes(item.symbol))
-    .filter(item => {
-      const rsi = item.technicalIndicators?.rsi || 0;
-      return rsi > 0;
-    })
-    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
-    .slice(0, 5);
-};
-
 export function MarketTable({ data }: MarketTableProps) {
-  const [sortField, setSortField] = useState<SortField>('priceChangePercent');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'emas' | 'topTrade'>('priceChangePercent');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSort = (field: SortField) => {
+  const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'emas' | 'topTrade') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -42,7 +27,7 @@ export function MarketTable({ data }: MarketTableProps) {
     }
   };
 
-  const getSortIcon = (field: SortField) => {
+  const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'emas' | 'topTrade') => {
     if (sortField !== field) return <ArrowUpDown className="w-4 h-4" />;
     return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
   };
@@ -58,8 +43,8 @@ export function MarketTable({ data }: MarketTableProps) {
     
     return {
       price: price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      status: price > ema12 && price > ema26 ? 'bullish' : 'bearish',
-      direction: price > ema12 && price > ema26 ? 'CIMA' : 'BAIXO',
+      status: price > ema12 && price > ema26 ? 'bullish' : price < ema12 && price < ema26 ? 'bearish' : 'neutral',
+      direction: price > ema12 && price > ema26 ? 'CIMA' : price < ema12 && price < ema26 ? 'BAIXO' : 'NEUTRAL',
       change24h: change24h.toFixed(2)
     };
   };
@@ -73,26 +58,11 @@ export function MarketTable({ data }: MarketTableProps) {
     const totalVolume = data.reduce((acc, curr) => acc + parseFloat(curr.volume), 0);
     const dominancePercentage = (volume / totalVolume) * 100;
     
-    const ema12_5m = btcDomData.technicalIndicators?.ema12_5m || 0;
-    const ema26_5m = btcDomData.technicalIndicators?.ema26_5m || 0;
-    const ema12_15m = btcDomData.technicalIndicators?.ema12_15m || 0;
-    const ema26_15m = btcDomData.technicalIndicators?.ema26_15m || 0;
-    const ema12_1h = btcDomData.technicalIndicators?.ema12_1h || 0;
-    const ema26_1h = btcDomData.technicalIndicators?.ema26_1h || 0;
-    
-    const isBullish = price > ema12_5m && price > ema26_5m && 
-                     price > ema12_15m && price > ema26_15m &&
-                     price > ema12_1h && price > ema26_1h;
-    
-    const isBearish = price < ema12_5m && price < ema26_5m && 
-                     price < ema12_15m && price < ema26_15m &&
-                     price < ema12_1h && price < ema26_1h;
-    
     return {
       price: price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       dominance: dominancePercentage.toFixed(2),
-      status: isBullish ? 'bullish' : isBearish ? 'bearish' : 'neutral',
-      direction: isBullish ? 'CIMA' : isBearish ? 'BAIXO' : ''
+      status: btcDomData.technicalIndicators?.iaSignal || 'neutral',
+      direction: btcDomData.technicalIndicators?.iaSignal === 'bullish' ? 'CIMA' : btcDomData.technicalIndicators?.iaSignal === 'bearish' ? 'BAIXO' : 'NEUTRAL'
     };
   };
 
@@ -105,92 +75,62 @@ export function MarketTable({ data }: MarketTableProps) {
       return rsi > 0;
     });
 
-  const sortedData = [...filteredData].sort((a, b) => {
-    const multiplier = sortDirection === 'asc' ? 1 : -1;
-    
-    let valueA: any;
-    let valueB: any;
-    
-    switch(sortField) {
-      case 'topTrade':
-        valueA = parseFloat(a.count || '0');
-        valueB = parseFloat(b.count || '0');
-        return (valueB - valueA) * multiplier;
-      case 'iaSignal':
-        valueA = a.technicalIndicators?.iaSignal || '';
-        valueB = b.technicalIndicators?.iaSignal || '';
-        return valueA.localeCompare(valueB) * multiplier;
-      case 'macd':
-        valueA = a.technicalIndicators?.macd || '';
-        valueB = b.technicalIndicators?.macd || '';
-        return valueA.localeCompare(valueB) * multiplier;
-      case 'emas':
-        valueA = a.technicalIndicators?.ema50 || 0;
-        valueB = b.technicalIndicators?.ema50 || 0;
-        return (valueA - valueB) * multiplier;
-      default:
-        valueA = parseFloat(a[sortField]?.toString() || '0');
-        valueB = parseFloat(b[sortField]?.toString() || '0');
-        return (valueA - valueB) * multiplier;
-    }
-  });
+  const topTrades = filteredData
+    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
+    .slice(0, 5);
 
-  const topTrades = getTopTrades(filteredData);
   const btcStatus = getBTCStatus();
   const btcDominance = getBTCDominance();
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="bg-gradient-to-br from-primary-100/50 to-primary-200/50 dark:from-gray-800/50 dark:to-gray-700/50 p-6 rounded-xl shadow-xl backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+      <div className="bg-gradient-to-br from-primary-100/50 to-primary-200/50 dark:from-gray-800/50 dark:to-gray-700/50 p-6 rounded-2xl shadow-xl backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="glass-effect p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300">
-            <div className="flex justify-between items-start mb-4">
+          <div className="stats-card">
+            <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Bitcoin</div>
-                <div className={`text-3xl font-bold ${btcStatus.status === 'bullish' ? 'text-green-500' : 'text-red-500'} mb-2`}>
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">Bitcoin</h3>
+                <div className={`text-3xl font-bold ${btcStatus.status === 'bullish' ? 'text-green-500' : btcStatus.status === 'bearish' ? 'text-red-500' : 'text-gray-500'} mb-2`}>
                   ${btcStatus.price}
                 </div>
+                <div className={`text-sm ${parseFloat(btcStatus.change24h) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  24h: {parseFloat(btcStatus.change24h) >= 0 ? '+' : ''}{btcStatus.change24h}%
+                </div>
               </div>
-              <div className={`text-sm ${parseFloat(btcStatus.change24h) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {parseFloat(btcStatus.change24h) >= 0 ? '+' : ''}{btcStatus.change24h}%
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
+                btcStatus.status === 'bullish' 
+                  ? 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                  : btcStatus.status === 'bearish' 
+                  ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                  : 'bg-gray-100 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400'
+              }`}>
+                <span className="font-medium">{btcStatus.direction}</span>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {btcStatus.status === 'bullish' ? (
-                <ArrowUp className="w-4 h-4 text-green-500" />
-              ) : (
-                <ArrowDown className="w-4 h-4 text-red-500" />
-              )}
-              <span className={`text-sm font-medium ${btcStatus.status === 'bullish' ? 'text-green-500' : 'text-red-500'}`}>
-                {btcStatus.direction}
-              </span>
             </div>
           </div>
-          <div className="glass-effect p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300">
+          
+          <div className="stats-card">
             <div className="flex justify-between items-start">
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">BTC Dominance</div>
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                {btcDominance.dominance}%
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">BTC Dominance</h3>
+                <div className={`text-3xl font-bold ${btcDominance.status === 'bullish' ? 'text-green-500' : btcDominance.status === 'bearish' ? 'text-red-500' : 'text-gray-500'} mb-2`}>
+                  ${btcDominance.price}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  Dominância: {btcDominance.dominance}%
+                </div>
               </div>
-            </div>
-            <div className={`text-3xl font-bold ${btcDominance.status === 'bullish' ? 'text-green-500' : 'text-red-500'} mb-4`}>
-              ${btcDominance.price}
-            </div>
-            <div className="flex items-center gap-2">
-              {btcDominance.status === 'bullish' ? (
-                <ArrowUp className="w-4 h-4 text-green-500" />
-              ) : btcDominance.status === 'bearish' ? (
-                <ArrowDown className="w-4 h-4 text-red-500" />
-              ) : null}
-              <span className={`text-sm font-medium ${
-                btcDominance.status === 'bullish' 
-                  ? 'text-green-500' 
-                  : btcDominance.status === 'bearish'
-                  ? 'text-red-500'
-                  : 'text-gray-500'
-              }`}>
-                {btcDominance.direction}
-              </span>
+              {btcDominance.status !== 'neutral' && (
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
+                  btcDominance.status === 'bullish'
+                    ? 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                    : btcDominance.status === 'bearish'
+                    ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                    : 'bg-gray-100 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400'
+                }`}>
+                  <span className="font-medium">{btcDominance.direction}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -308,14 +248,14 @@ export function MarketTable({ data }: MarketTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {sortedData.map((item) => (
+            {filteredData.map((item) => (
               <MarketRow key={item.symbol} item={item} />
             ))}
           </tbody>
         </table>
       </div>
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        Mostrando {sortedData.length} de {data.length} pares
+        Mostrando {filteredData.length} de {data.length} pares
       </div>
     </div>
   );
