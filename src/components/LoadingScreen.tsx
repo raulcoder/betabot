@@ -14,8 +14,8 @@ export function LoadingScreen() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-xl">
-      <div className="text-center glass-effect p-12">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-gray-900">
+      <div className="text-center">
         <img
           src="https://www.betabot.org/painel.gif"
           alt="Beta Bot Loading"
