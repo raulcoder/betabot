@@ -1,77 +1,39 @@
-import { useEffect, useRef } from 'react';
 import { MarketData } from '../../types/binance';
-import { ArrowUp, ArrowDown } from 'lucide-react';
-import { formatNumber } from '../MarketTable';
+import { ArrowUp, ArrowDown, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface MarketRowProps {
   item: MarketData;
 }
 
 export function MarketRow({ item }: MarketRowProps) {
-  const prevValues = useRef({
-    price: parseFloat(item.lastPrice),
-    volume: parseFloat(item.volume),
-    rsi: item.technicalIndicators?.rsi || 0,
-    lsr: parseFloat(item.longShortRatio || '0')
-  });
-  const rowRef = useRef<HTMLTableRowElement>(null);
-
-  useEffect(() => {
-    const currentValues = {
-      price: parseFloat(item.lastPrice),
-      volume: parseFloat(item.volume),
-      rsi: item.technicalIndicators?.rsi || 0,
-      lsr: parseFloat(item.longShortRatio || '0')
-    };
-
-    if (rowRef.current) {
-      if (currentValues.price > prevValues.current.price ||
-          currentValues.volume > prevValues.current.volume ||
-          currentValues.rsi > prevValues.current.rsi ||
-          currentValues.lsr > prevValues.current.lsr) {
-        rowRef.current.classList.remove('blink-red');
-        rowRef.current.classList.add('blink-green');
-        setTimeout(() => {
-          rowRef.current?.classList.remove('blink-green');
-        }, 600);
-      } else if (currentValues.price < prevValues.current.price ||
-                 currentValues.volume < prevValues.current.volume ||
-                 currentValues.rsi < prevValues.current.rsi ||
-                 currentValues.lsr < prevValues.current.lsr) {
-        rowRef.current.classList.remove('blink-green');
-        rowRef.current.classList.add('blink-red');
-        setTimeout(() => {
-          rowRef.current?.classList.remove('blink-red');
-        }, 600);
-      }
-    }
-
-    prevValues.current = currentValues;
-  }, [item]);
-
   const priceChange = parseFloat(item.priceChangePercent);
   const rsi = item.technicalIndicators?.rsi || 0;
   const volume = parseFloat(item.volume);
-  const formattedVolume = formatNumber(volume);
+  const formattedVolume = volume >= 1e6 ? `${(volume / 1e6).toFixed(2)}M` : volume.toFixed(2);
 
   const getRSIColor = (value: number) => {
     if (value >= 70) return 'text-red-500';
     if (value <= 30) return 'text-green-500';
-    return 'text-gray-600';
+    return 'text-gray-600 dark:text-gray-300';
+  };
+
+  const getSignalIcon = (signal: string) => {
+    if (signal === 'bullish') return <TrendingUp className="w-4 h-4 text-green-500" />;
+    if (signal === 'bearish') return <TrendingDown className="w-4 h-4 text-red-500" />;
+    return null;
   };
 
   return (
-    <tr ref={rowRef} className="hover:bg-gray-50 transition-colors">
+    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
       <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium">
         {item.symbol.replace('USDT', '')}
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center gap-2">
-          {item.technicalIndicators?.iaSignal === 'bullish' ? (
-            <ArrowUp className="w-4 h-4 text-green-500" />
-          ) : item.technicalIndicators?.iaSignal === 'bearish' ? (
-            <ArrowDown className="w-4 h-4 text-red-500" />
-          ) : null}
+          {getSignalIcon(item.technicalIndicators?.iaSignal || '')}
+          <span className={item.technicalIndicators?.iaSignal === 'bullish' ? 'text-green-500' : 'text-red-500'}>
+            {item.technicalIndicators?.iaSignal || '-'}
+          </span>
         </div>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
@@ -89,7 +51,7 @@ export function MarketRow({ item }: MarketRowProps) {
       <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium">
         ${parseFloat(item.lastPrice).toFixed(4)}
       </td>
-      <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-600">
+      <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-600 dark:text-gray-300">
         ${formattedVolume}
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
@@ -99,11 +61,10 @@ export function MarketRow({ item }: MarketRowProps) {
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center gap-2">
-          {item.technicalIndicators?.macd === 'bullish' ? (
-            <ArrowUp className="w-4 h-4 text-green-500" />
-          ) : (
-            <ArrowDown className="w-4 h-4 text-red-500" />
-          )}
+          {getSignalIcon(item.technicalIndicators?.macd || '')}
+          <span className={item.technicalIndicators?.macd === 'bullish' ? 'text-green-500' : 'text-red-500'}>
+            {item.technicalIndicators?.macd || '-'}
+          </span>
         </div>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
@@ -111,12 +72,15 @@ export function MarketRow({ item }: MarketRowProps) {
           {parseFloat(item.lastPrice) > (item.technicalIndicators?.ema50 || 0) ? (
             <ArrowUp className="w-4 h-4 text-green-500" />
           ) : (
-            <ArrowDown className="w-4 h-4 text-red-500" />
+            <div className="flex items-center gap-1">
+              <ArrowDown className="w-4 h-4 text-red-500" />
+              <span className="text-red-500 text-sm">BAIXO</span>
+            </div>
           )}
         </div>
       </td>
       <td className="px-2 sm:px-4 py-2 sm:py-3">
-        <span className="text-gray-600">
+        <span className="text-gray-600 dark:text-gray-300">
           {item.longShortRatio ? parseFloat(item.longShortRatio).toFixed(2) : '-'}
         </span>
       </td>
