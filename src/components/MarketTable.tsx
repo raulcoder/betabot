@@ -122,7 +122,6 @@ export function MarketTable({ data }: MarketTableProps) {
     .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
     .slice(0, 5);
 
-<<<<<<< HEAD
   const formatPriceChange = (change: number) => {
     const absChange = Math.abs(change);
     return change >= 0 ? `+${absChange.toFixed(2)}%` : `-${absChange.toFixed(2)}%`;
@@ -134,8 +133,7 @@ export function MarketTable({ data }: MarketTableProps) {
     return 'neutral';
   };
 
-=======
->>>>>>> f9d757993b0bc58644d3975b80ce67f636efcde1
+
   const btcData = filteredData.find(item => item.symbol === 'BTCUSDT') || {
     lastPrice: '0',
     priceChangePercent: '0'
