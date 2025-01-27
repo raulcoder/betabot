@@ -35,28 +35,20 @@ const getMarketStatus = (change: number) => {
 
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | 'none'>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
     if (field === sortField) {
-      // Se clicar no mesmo campo, alterna entre asc -> desc -> none -> asc
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
-      } else if (sortDirection === 'desc') {
-        setSortDirection('none');
-      } else {
-        setSortDirection('asc');
-      }
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
     } else {
-      // Se clicar em um novo campo, começa com desc
       setSortField(field);
       setSortDirection('desc');
     }
   };
 
   const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
-    if (sortField !== field || sortDirection === 'none') {
+    if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
     }
     return sortDirection === 'asc' ? 
@@ -71,75 +63,54 @@ export function MarketTable({ data }: MarketTableProps) {
     .filter(item => {
       const rsi = item.technicalIndicators?.rsi || 0;
       return rsi > 0;
-    })
-    .sort((a, b) => {
-      if (sortDirection === 'none') return 0;
-      
-      let aValue: number | string = 0;
-      let bValue: number | string = 0;
-
-      switch (sortField) {
-        case 'priceChangePercent':
-          aValue = parseFloat(a.priceChangePercent);
-          bValue = parseFloat(b.priceChangePercent);
-          break;
-        case 'lastPrice':
-          aValue = parseFloat(a.lastPrice);
-          bValue = parseFloat(b.lastPrice);
-          break;
-        case 'volume':
-          aValue = parseFloat(a.volume);
-          bValue = parseFloat(b.volume);
-          break;
-        case 'longShortRatio':
-          aValue = parseFloat(a.longShortRatio || '1.0');
-          bValue = parseFloat(b.longShortRatio || '1.0');
-          break;
-        case 'rsi':
-          aValue = a.technicalIndicators?.rsi || 0;
-          bValue = b.technicalIndicators?.rsi || 0;
-          break;
-        case 'macd':
-          aValue = a.technicalIndicators?.macd || '';
-          bValue = b.technicalIndicators?.macd || '';
-          break;
-        default:
-          return 0;
-      }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      return sortDirection === 'asc' 
-        ? (aValue as number) - (bValue as number)
-        : (bValue as number) - (aValue as number);
     });
 
-  const topTrades = filteredData
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (sortField === 'priceChangePercent') {
+      const aValue = parseFloat(a.priceChangePercent);
+      const bValue = parseFloat(b.priceChangePercent);
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    if (sortField === 'lastPrice') {
+      const aValue = parseFloat(a.lastPrice);
+      const bValue = parseFloat(b.lastPrice);
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    if (sortField === 'volume') {
+      const aValue = parseFloat(a.volume);
+      const bValue = parseFloat(b.volume);
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    if (sortField === 'longShortRatio') {
+      const aValue = parseFloat(a.longShortRatio || '1.0');
+      const bValue = parseFloat(b.longShortRatio || '1.0');
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    if (sortField === 'rsi') {
+      const aValue = a.technicalIndicators?.rsi || 0;
+      const bValue = b.technicalIndicators?.rsi || 0;
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    if (sortField === 'macd') {
+      const aValue = a.technicalIndicators?.macd || '';
+      const bValue = b.technicalIndicators?.macd || '';
+      return sortDirection === 'asc' 
+        ? aValue.localeCompare(bValue) 
+        : bValue.localeCompare(aValue);
+    }
+    return 0;
+  });
+
+  const topTrades = sortedData
     .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
     .slice(0, 5);
 
-  const formatPriceChange = (change: number) => {
-    const absChange = Math.abs(change);
-    return change >= 0 ? `+${absChange.toFixed(2)}%` : `-${absChange.toFixed(2)}%`;
-  };
-
-  const getMarketStatus = (change: number) => {
-    if (change <= -2) return 'bearish';
-    if (change >= 2) return 'bullish';
-    return 'neutral';
-  };
-
-
-  const btcData = filteredData.find(item => item.symbol === 'BTCUSDT') || {
+  const btcData = sortedData.find(item => item.symbol === 'BTCUSDT') || {
     lastPrice: '0',
     priceChangePercent: '0'
   };
 
-  const btcDomData = filteredData.find(item => item.symbol === 'BTCDOMUSDT') || {
+  const btcDomData = sortedData.find(item => item.symbol === 'BTCDOMUSDT') || {
     lastPrice: '0',
     priceChangePercent: '0'
   };
@@ -309,7 +280,7 @@ export function MarketTable({ data }: MarketTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredData.map((item) => (
+            {sortedData.map((item) => (
               <MarketRow 
                 key={item.symbol} 
                 item={{
@@ -322,7 +293,7 @@ export function MarketTable({ data }: MarketTableProps) {
         </table>
       </div>
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        Mostrando {filteredData.length} de {data.length} pares
+        Mostrando {sortedData.length} de {data.length} pares
       </div>
     </div>
   );
