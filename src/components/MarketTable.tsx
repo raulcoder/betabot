@@ -24,28 +24,20 @@ export const formatNumber = (value: number) => {
 
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | 'none'>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
     if (field === sortField) {
-      // Se clicar no mesmo campo, alterna entre asc -> desc -> none -> asc
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
-      } else if (sortDirection === 'desc') {
-        setSortDirection('none');
-      } else {
-        setSortDirection('asc');
-      }
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
     } else {
-      // Se clicar em um novo campo, começa com desc
       setSortField(field);
       setSortDirection('desc');
     }
   };
 
   const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
-    if (sortField !== field || sortDirection === 'none') {
+    if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
     }
     return sortDirection === 'asc' ? 
@@ -62,8 +54,6 @@ export function MarketTable({ data }: MarketTableProps) {
       return rsi > 0;
     })
     .sort((a, b) => {
-      if (sortDirection === 'none') return 0;
-      
       let aValue: number | string = 0;
       let bValue: number | string = 0;
 
