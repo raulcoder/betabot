@@ -292,3 +292,4 @@ export function MarketTable({ data }: MarketTableProps) {
       </div>
     </div>
   );
+}
