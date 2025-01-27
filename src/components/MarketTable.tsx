@@ -29,7 +29,7 @@ export function MarketTable({ data }: MarketTableProps) {
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
     if (field === sortField) {
-      setSortDirection(current => current === 'desc' ? 'asc' : 'desc');
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
     } else {
       setSortField(field);
       setSortDirection('desc');
@@ -84,34 +84,6 @@ export function MarketTable({ data }: MarketTableProps) {
 
       return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     });
-
-  const topTrades = filteredData
-    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
-    .slice(0, 5);
-
-  const formatPriceChange = (change: number) => {
-    const absChange = Math.abs(change);
-    return change >= 0 ? `+${absChange.toFixed(2)}%` : `-${absChange.toFixed(2)}%`;
-  };
-
-  const getMarketStatus = (change: number) => {
-    if (change <= -2) return 'bearish';
-    if (change >= 2) return 'bullish';
-    return 'neutral';
-  };
-
-  const btcData = filteredData.find(item => item.symbol === 'BTCUSDT') || {
-    lastPrice: '0',
-    priceChangePercent: '0'
-  };
-
-  const btcDomData = filteredData.find(item => item.symbol === 'BTCDOMUSDT') || {
-    lastPrice: '0',
-    priceChangePercent: '0'
-  };
-
-  const btcChange = parseFloat(btcData.priceChangePercent);
-  const btcDomChange = parseFloat(btcDomData.priceChangePercent);
 
   return (
     <div className="space-y-6 animate-fade-in">
