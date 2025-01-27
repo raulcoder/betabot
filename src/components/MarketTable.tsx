@@ -25,7 +25,6 @@ export const formatNumber = (value: number) => {
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [iaSignalSortState, setIaSignalSortState] = useState<'bearish' | 'bullish' | 'neutral' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {

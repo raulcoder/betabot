@@ -1,4 +1,3 @@
-import { TrendingUp, TrendingDown } from 'lucide-react';
 import { MarketRowProps } from '../../types/market';
 
 export function MarketRow({ item }: MarketRowProps) {

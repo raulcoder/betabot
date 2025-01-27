@@ -1,6 +1,4 @@
-import React from 'react';
-
-export const LoadingScreen = () => {
+const LoadingScreen = () => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg z-50">
       <div className="relative animate-pulse">
@@ -13,3 +11,5 @@ export const LoadingScreen = () => {
     </div>
   );
 };
+
+export { LoadingScreen };
