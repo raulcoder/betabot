@@ -24,20 +24,28 @@ export const formatNumber = (value: number) => {
 
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | 'none'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
     if (field === sortField) {
-      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+      // Se clicar no mesmo campo, alterna entre asc -> desc -> none -> asc
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection('none');
+      } else {
+        setSortDirection('asc');
+      }
     } else {
+      // Se clicar em um novo campo, começa com desc
       setSortField(field);
       setSortDirection('desc');
     }
   };
 
   const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
-    if (sortField !== field) {
+    if (sortField !== field || sortDirection === 'none') {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
     }
     return sortDirection === 'asc' ? 
@@ -54,8 +62,10 @@ export function MarketTable({ data }: MarketTableProps) {
       return rsi > 0;
     })
     .sort((a, b) => {
-      let aValue = 0;
-      let bValue = 0;
+      if (sortDirection === 'none') return 0;
+      
+      let aValue: number | string = 0;
+      let bValue: number | string = 0;
 
       switch (sortField) {
         case 'priceChangePercent':
@@ -78,12 +88,52 @@ export function MarketTable({ data }: MarketTableProps) {
           aValue = a.technicalIndicators?.rsi || 0;
           bValue = b.technicalIndicators?.rsi || 0;
           break;
+        case 'macd':
+          aValue = a.technicalIndicators?.macd || '';
+          bValue = b.technicalIndicators?.macd || '';
+          break;
         default:
           return 0;
       }
 
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return sortDirection === 'asc' 
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
     });
+
+  const topTrades = filteredData
+    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
+    .slice(0, 5);
+
+  const formatPriceChange = (change: number) => {
+    const absChange = Math.abs(change);
+    return change >= 0 ? `+${absChange.toFixed(2)}%` : `-${absChange.toFixed(2)}%`;
+  };
+
+  const getMarketStatus = (change: number) => {
+    if (change <= -2) return 'bearish';
+    if (change >= 2) return 'bullish';
+    return 'neutral';
+  };
+
+  const btcData = filteredData.find(item => item.symbol === 'BTCUSDT') || {
+    lastPrice: '0',
+    priceChangePercent: '0'
+  };
+
+  const btcDomData = filteredData.find(item => item.symbol === 'BTCDOMUSDT') || {
+    lastPrice: '0',
+    priceChangePercent: '0'
+  };
+
+  const btcChange = parseFloat(btcData.priceChangePercent);
+  const btcDomChange = parseFloat(btcDomData.priceChangePercent);
 
   return (
     <div className="space-y-6 animate-fade-in">
