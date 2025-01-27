@@ -25,22 +25,35 @@ export const formatNumber = (value: number) => {
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [iaSignalSortState, setIaSignalSortState] = useState<'bearish' | 'bullish' | 'neutral' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
+    if (field === 'iaSignal') {
+      if (!iaSignalSortState) {
+        setIaSignalSortState('bearish');
+      } else if (iaSignalSortState === 'bearish') {
+        setIaSignalSortState('bullish');
+      } else if (iaSignalSortState === 'bullish') {
+        setIaSignalSortState('neutral');
+      } else {
+        setIaSignalSortState(null);
+      }
       setSortField(field);
-      setSortDirection('desc');
+    } else {
+      if (sortField === field) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortField(field);
+        setSortDirection('desc');
+      }
+      setIaSignalSortState(null);
     }
   };
 
   const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
-    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
-    return sortDirection === 'asc' ? 
-      <ArrowUp className="w-4 h-4 text-primary-500" /> : 
-      <ArrowDown className="w-4 h-4 text-primary-500" />;
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4" />;
+    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
   };
 
   const getBTCStatus = () => {
@@ -114,6 +127,23 @@ export function MarketTable({ data }: MarketTableProps) {
     .sort((a, b) => {
       let aValue: number | string = 0;
       let bValue: number | string = 0;
+
+      if (sortField === 'iaSignal' && iaSignalSortState) {
+        const aSignal = a.technicalIndicators?.iaSignal || '';
+        const bSignal = b.technicalIndicators?.iaSignal || '';
+        
+        if (iaSignalSortState === 'bearish') {
+          if (aSignal === 'bearish') return -1;
+          if (bSignal === 'bearish') return 1;
+        } else if (iaSignalSortState === 'bullish') {
+          if (aSignal === 'bullish') return -1;
+          if (bSignal === 'bullish') return 1;
+        } else if (iaSignalSortState === 'neutral') {
+          if (aSignal === 'neutral') return -1;
+          if (bSignal === 'neutral') return 1;
+        }
+        return 0;
+      }
 
       switch (sortField) {
         case 'priceChangePercent':
