@@ -54,17 +54,14 @@ export function MarketTable({ data }: MarketTableProps) {
     const ema26_1h = btcData.technicalIndicators?.ema26_1h || 0;
     const change24h = parseFloat(btcData.priceChangePercent);
     
-    // Check if price is above EMAs in all timeframes
     const above5m = price > ema12_5m && price > ema26_5m;
     const above15m = price > ema12_15m && price > ema26_15m;
     const above1h = price > ema12_1h && price > ema26_1h;
     
-    // Check if price is below EMAs in all timeframes
     const below5m = price < ema12_5m && price < ema26_5m;
     const below15m = price < ema12_15m && price < ema26_15m;
     const below1h = price < ema12_1h && price < ema26_1h;
     
-    // Only return bullish if above ALL timeframes, bearish if below ALL timeframes
     const status = above5m && above15m && above1h ? 'bullish' : 
                   below5m && below15m && below1h ? 'bearish' : 
                   'neutral';
@@ -111,6 +108,54 @@ export function MarketTable({ data }: MarketTableProps) {
     .filter(item => {
       const rsi = item.technicalIndicators?.rsi || 0;
       return rsi > 0;
+    })
+    .sort((a, b) => {
+      let aValue: number | string = 0;
+      let bValue: number | string = 0;
+
+      switch (sortField) {
+        case 'priceChangePercent':
+          aValue = parseFloat(a.priceChangePercent);
+          bValue = parseFloat(b.priceChangePercent);
+          break;
+        case 'lastPrice':
+          aValue = parseFloat(a.lastPrice);
+          bValue = parseFloat(b.lastPrice);
+          break;
+        case 'volume':
+          aValue = parseFloat(a.volume);
+          bValue = parseFloat(b.volume);
+          break;
+        case 'longShortRatio':
+          aValue = parseFloat(a.longShortRatio || '1.0');
+          bValue = parseFloat(b.longShortRatio || '1.0');
+          break;
+        case 'rsi':
+          aValue = a.technicalIndicators?.rsi || 0;
+          bValue = b.technicalIndicators?.rsi || 0;
+          break;
+        case 'iaSignal':
+          aValue = a.technicalIndicators?.iaSignal || '';
+          bValue = b.technicalIndicators?.iaSignal || '';
+          break;
+        case 'macd':
+          aValue = a.technicalIndicators?.macd || '';
+          bValue = b.technicalIndicators?.macd || '';
+          break;
+        default:
+          aValue = 0;
+          bValue = 0;
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return sortDirection === 'asc' 
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
     });
 
   const topTrades = filteredData
