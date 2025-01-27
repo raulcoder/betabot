@@ -4,6 +4,7 @@ import { MarketTable } from './components/MarketTable';
 import { NewListingAlert } from './components/NewListingAlert';
 import { LanguageSelector } from './components/LanguageSelector';
 import { PromoPopup } from './components/PromoPopup';
+import { LoadingScreen } from './components/LoadingScreen';
 import { Activity, Sun, Moon } from 'lucide-react';
 import { useQuery } from 'react-query';
 import { useState, useEffect } from 'react';
@@ -21,7 +22,7 @@ const queryClient = new QueryClient({
 function Dashboard() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   
-  const { data: marketData } = useQuery({
+  const { data: marketData, isLoading } = useQuery({
     queryKey: ['24hTicker'],
     queryFn: fetch24hTicker,
     refetchInterval: 5000,
@@ -42,6 +43,7 @@ function Dashboard() {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-all duration-300`}>
+      {isLoading && <LoadingScreen />}
       <header className="sticky top-0 z-10 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
