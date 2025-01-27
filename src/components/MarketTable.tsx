@@ -22,6 +22,17 @@ export const formatNumber = (value: number) => {
   return value.toFixed(2);
 };
 
+const formatPriceChange = (change: number) => {
+  const absChange = Math.abs(change);
+  return change >= 0 ? `+${absChange.toFixed(2)}%` : `-${absChange.toFixed(2)}%`;
+};
+
+const getMarketStatus = (change: number) => {
+  if (change <= -2) return 'bearish';
+  if (change >= 2) return 'bullish';
+  return 'neutral';
+};
+
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -84,6 +95,23 @@ export function MarketTable({ data }: MarketTableProps) {
 
       return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     });
+
+  const topTrades = filteredData
+    .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
+    .slice(0, 5);
+
+  const btcData = filteredData.find(item => item.symbol === 'BTCUSDT') || {
+    lastPrice: '0',
+    priceChangePercent: '0'
+  };
+
+  const btcDomData = filteredData.find(item => item.symbol === 'BTCDOMUSDT') || {
+    lastPrice: '0',
+    priceChangePercent: '0'
+  };
+
+  const btcChange = parseFloat(btcData.priceChangePercent);
+  const btcDomChange = parseFloat(btcDomData.priceChangePercent);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -264,4 +292,3 @@ export function MarketTable({ data }: MarketTableProps) {
       </div>
     </div>
   );
-}
