@@ -51,7 +51,7 @@ export function MarketTable({ data }: MarketTableProps) {
     }
   };
 
-  const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'emas' | 'topTrade') => {
+  const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
     if (sortField !== field) return <ArrowUpDown className="w-4 h-4" />;
     return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
   };
@@ -348,13 +348,6 @@ export function MarketTable({ data }: MarketTableProps) {
                 <div className="flex items-center gap-1 sm:gap-2">
                   MACD
                   {getSortIcon('macd')}
-                </div>
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('emas')}>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  EMAs
-                  {getSortIcon('emas')}
                 </div>
               </th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
