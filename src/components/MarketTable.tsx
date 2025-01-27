@@ -29,7 +29,7 @@ export function MarketTable({ data }: MarketTableProps) {
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
     if (field === sortField) {
-      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+      setSortDirection(current => current === 'desc' ? 'asc' : 'desc');
     } else {
       setSortField(field);
       setSortDirection('desc');
@@ -54,8 +54,8 @@ export function MarketTable({ data }: MarketTableProps) {
       return rsi > 0;
     })
     .sort((a, b) => {
-      let aValue: number | string = 0;
-      let bValue: number | string = 0;
+      let aValue = 0;
+      let bValue = 0;
 
       switch (sortField) {
         case 'priceChangePercent':
@@ -78,23 +78,11 @@ export function MarketTable({ data }: MarketTableProps) {
           aValue = a.technicalIndicators?.rsi || 0;
           bValue = b.technicalIndicators?.rsi || 0;
           break;
-        case 'macd':
-          aValue = a.technicalIndicators?.macd || '';
-          bValue = b.technicalIndicators?.macd || '';
-          break;
         default:
           return 0;
       }
 
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      return sortDirection === 'asc' 
-        ? (aValue as number) - (bValue as number)
-        : (bValue as number) - (aValue as number);
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     });
 
   const topTrades = filteredData
