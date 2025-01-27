@@ -24,96 +24,34 @@ export const formatNumber = (value: number) => {
 
 export function MarketTable({ data }: MarketTableProps) {
   const [sortField, setSortField] = useState<'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade'>('priceChangePercent');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | 'none'>('desc');
   const [iaSignalSortState, setIaSignalSortState] = useState<'bearish' | 'bullish' | 'neutral' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSort = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
-    if (field === 'iaSignal') {
-      if (!iaSignalSortState) {
-        setIaSignalSortState('bearish');
-      } else if (iaSignalSortState === 'bearish') {
-        setIaSignalSortState('bullish');
-      } else if (iaSignalSortState === 'bullish') {
-        setIaSignalSortState('neutral');
-      } else {
-        setIaSignalSortState(null);
-      }
-      setSortField(field);
-    } else {
-      if (sortField === field) {
-        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-      } else {
-        setSortField(field);
+    if (field === sortField) {
+      // Se clicar no mesmo campo, alterna entre asc -> desc -> none -> asc
+      if (sortDirection === 'asc') {
         setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection('none');
+      } else {
+        setSortDirection('asc');
       }
-      setIaSignalSortState(null);
+    } else {
+      // Se clicar em um novo campo, começa com desc
+      setSortField(field);
+      setSortDirection('desc');
     }
   };
 
   const getSortIcon = (field: 'priceChangePercent' | 'lastPrice' | 'volume' | 'longShortRatio' | 'volatility' | 'rsi' | 'iaSignal' | 'macd' | 'topTrade') => {
-    if (sortField !== field) return <ArrowUpDown className="w-4 h-4" />;
-    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
-  };
-
-  const getBTCStatus = () => {
-    const btcData = data.find(item => item.symbol === 'BTCUSDT');
-    if (!btcData) return { price: '0', status: 'neutral', change24h: '0' };
-    
-    const price = parseFloat(btcData.lastPrice);
-    const ema12_5m = btcData.technicalIndicators?.ema12_5m || 0;
-    const ema26_5m = btcData.technicalIndicators?.ema26_5m || 0;
-    const ema12_15m = btcData.technicalIndicators?.ema12_15m || 0;
-    const ema26_15m = btcData.technicalIndicators?.ema26_15m || 0;
-    const ema12_1h = btcData.technicalIndicators?.ema12_1h || 0;
-    const ema26_1h = btcData.technicalIndicators?.ema26_1h || 0;
-    const change24h = parseFloat(btcData.priceChangePercent);
-    
-    const above5m = price > ema12_5m && price > ema26_5m;
-    const above15m = price > ema12_15m && price > ema26_15m;
-    const above1h = price > ema12_1h && price > ema26_1h;
-    
-    const below5m = price < ema12_5m && price < ema26_5m;
-    const below15m = price < ema12_15m && price < ema26_15m;
-    const below1h = price < ema12_1h && price < ema26_1h;
-    
-    const status = above5m && above15m && above1h ? 'bullish' : 
-                  below5m && below15m && below1h ? 'bearish' : 
-                  'neutral';
-    
-    return {
-      price: price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      status,
-      change24h: change24h.toFixed(2)
-    };
-  };
-
-  const getBTCDominance = () => {
-    const btcDomData = data.find(item => item.symbol === 'BTCDOMUSDT');
-    if (!btcDomData) return { price: '0', status: 'neutral', change24h: '0' };
-    
-    const price = parseFloat(btcDomData.lastPrice);
-    const ema12_5m = btcDomData.technicalIndicators?.ema12_5m || 0;
-    const ema26_5m = btcDomData.technicalIndicators?.ema26_5m || 0;
-    const ema12_15m = btcDomData.technicalIndicators?.ema12_15m || 0;
-    const ema26_15m = btcDomData.technicalIndicators?.ema26_15m || 0;
-    const ema12_1h = btcDomData.technicalIndicators?.ema12_1h || 0;
-    const ema26_1h = btcDomData.technicalIndicators?.ema26_1h || 0;
-    const change24h = parseFloat(btcDomData.priceChangePercent);
-    
-    const above5m = price > ema12_5m && price > ema26_5m;
-    const above15m = price > ema12_15m && price > ema26_15m;
-    const above1h = price > ema12_1h && price > ema26_1h;
-    
-    const below5m = price < ema12_5m && price < ema26_5m;
-    const below15m = price < ema12_15m && price < ema26_15m;
-    const below1h = price < ema12_1h && price < ema26_1h;
-    
-    return {
-      price: price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      status: above5m && above15m && above1h ? 'bullish' : below5m && below15m && below1h ? 'bearish' : 'neutral',
-      change24h: change24h.toFixed(2)
-    };
+    if (sortField !== field || sortDirection === 'none') {
+      return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="w-4 h-4 text-primary-500" /> : 
+      <ArrowDown className="w-4 h-4 text-primary-500" />;
   };
 
   const filteredData = data
@@ -125,25 +63,10 @@ export function MarketTable({ data }: MarketTableProps) {
       return rsi > 0;
     })
     .sort((a, b) => {
+      if (sortDirection === 'none') return 0;
+      
       let aValue: number | string = 0;
       let bValue: number | string = 0;
-
-      if (sortField === 'iaSignal' && iaSignalSortState) {
-        const aSignal = a.technicalIndicators?.iaSignal || '';
-        const bSignal = b.technicalIndicators?.iaSignal || '';
-        
-        if (iaSignalSortState === 'bearish') {
-          if (aSignal === 'bearish') return -1;
-          if (bSignal === 'bearish') return 1;
-        } else if (iaSignalSortState === 'bullish') {
-          if (aSignal === 'bullish') return -1;
-          if (bSignal === 'bullish') return 1;
-        } else if (iaSignalSortState === 'neutral') {
-          if (aSignal === 'neutral') return -1;
-          if (bSignal === 'neutral') return 1;
-        }
-        return 0;
-      }
 
       switch (sortField) {
         case 'priceChangePercent':
@@ -171,8 +94,7 @@ export function MarketTable({ data }: MarketTableProps) {
           bValue = b.technicalIndicators?.macd || '';
           break;
         default:
-          aValue = 0;
-          bValue = 0;
+          return 0;
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -189,9 +111,6 @@ export function MarketTable({ data }: MarketTableProps) {
   const topTrades = filteredData
     .sort((a, b) => (parseInt(b.count || '0') - parseInt(a.count || '0')))
     .slice(0, 5);
-
-  const btcStatus = getBTCStatus();
-  const btcDominance = getBTCDominance();
 
   const formatPriceChange = (change: number) => {
     const absChange = Math.abs(change);
