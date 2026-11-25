@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>BetaBot TV — Binance Futures Supercharts</title>
+	<title>BetaTV — Supercharts</title>
 	<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='13' width='4' height='8' rx='1' fill='%232962FF'/%3E%3Crect x='10' y='7' width='4' height='14' rx='1' fill='%23089981'/%3E%3Crect x='18' y='3' width='4' height='18' rx='1' fill='%232962FF'/%3E%3C/svg%3E" />
 	<script>
 		(function () {
@@ -20,138 +20,301 @@
 </head>
 <body>
 	<div class="tv-app">
-		<!-- Optional Live Binance Futures Ticker Tape -->
-		<div id="tv-ticker-tape" class="tv-ticker-tape" aria-label="Live Ticker Tape"></div>
+		<!-- Optional Live Ticker Tape (off by default, toggle in Main Menu) -->
+		<div id="tv-ticker-tape" class="tv-ticker-tape is-hidden" aria-label="Live Ticker Tape"></div>
 
-		<!-- Top Supercharts App Bar (38px) -->
+		<!-- Single Unified TradingView Supercharts Top Bar (38px) -->
 		<header class="tv-topbar">
-			<div class="tv-topbar-group">
-				<a href="https://www.betabot.store/tv" target="_blank" rel="noopener" class="tv-brand" title="BetaBot Futures Supercharts">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-						<rect x="2" y="13" width="4" height="8" rx="1" fill="#2962FF"/>
-						<rect x="10" y="7" width="4" height="14" rx="1" fill="#089981"/>
-						<rect x="18" y="3" width="4" height="18" rx="1" fill="#2962FF"/>
+			<!-- Left 52px Hamburger Menu Slot aligned above Left Drawing Toolbar -->
+			<div class="tv-topbar-left-slot tv-dropdown">
+				<button id="btn-main-menu" class="tv-main-menu-btn" title="Main Menu" aria-haspopup="menu">
+					<svg width="22" height="22" viewBox="0 0 28 28" fill="currentColor">
+						<path d="M6 7h16a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2zm0 6h16a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2zm0 6h16a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2z"/>
 					</svg>
-					<span>BetaTV</span>
-					<span id="ws-status-dot" class="tv-brand-dot" title="Binance WebSocket Status"></span>
-				</a>
-
-				<span class="tv-sep"></span>
-
-				<button id="btn-quick-search" class="tv-tb-btn tv-symbol-pill" title="Quick Search & Symbol Switcher (Ctrl+K)">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-					<span id="hdr-active-symbol">BTCUSDT.P</span>
-					<span class="tv-kbd">Ctrl+K</span>
 				</button>
-
-				<div class="tv-live-badge" title="Active Symbol 24h Live Price">
-					<span id="hdr-active-price">--</span>
-					<span id="hdr-active-chg" class="is-neutral">--</span>
+				<div id="menu-main" class="tv-menu tv-main-popover" style="min-width:255px;">
+					<div class="tv-main-brand-row">
+						<div class="tv-brand-left">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+								<rect x="2" y="13" width="4" height="8" rx="1" fill="#2962FF"/>
+								<rect x="10" y='7' width='4' height='14' rx='1' fill='#089981'/>
+								<rect x="18" y="3" width="4" height="18" rx="1" fill="#2962FF"/>
+							</svg>
+							<strong>BetaTV</strong>
+							<span class="tv-brand-tag">Supercharts</span>
+						</div>
+						<span class="tv-ws-pill" title="Binance Futures WebSocket Status">
+							<span id="ws-status-dot" class="tv-brand-dot"></span>
+							<span id="ws-status-label">Live</span>
+						</span>
+					</div>
+					<div class="tv-menu-divider"></div>
+					<label class="tv-menu-item tv-switch-row">
+						<span>Dark theme</span>
+						<span class="tv-switch">
+							<input id="chk-dark-theme" type="checkbox" checked />
+							<span class="tv-switch-track"></span>
+						</span>
+					</label>
+					<label class="tv-menu-item tv-switch-row">
+						<span>Drawings panel</span>
+						<span class="tv-switch">
+							<input id="chk-drawings-panel" type="checkbox" checked />
+							<span class="tv-switch-track"></span>
+						</span>
+					</label>
+					<label class="tv-menu-item tv-switch-row">
+						<span>Buy / Sell buttons</span>
+						<span class="tv-switch">
+							<input id="chk-buysell-buttons" type="checkbox" checked />
+							<span class="tv-switch-track"></span>
+						</span>
+					</label>
+					<label class="tv-menu-item tv-switch-row">
+						<span>Ticker tape</span>
+						<span class="tv-switch">
+							<input id="chk-ticker-tape" type="checkbox" />
+							<span class="tv-switch-track"></span>
+						</span>
+					</label>
+					<div class="tv-menu-divider"></div>
+					<button id="btn-locale-toggle" class="tv-menu-item">
+						<span>Language</span>
+						<span id="hdr-locale-val" style="color:var(--text-secondary);">Português &rsaquo;</span>
+					</button>
+					<button id="btn-menu-shortcuts" class="tv-menu-item">
+						<span>Keyboard shortcuts</span>
+						<span class="tv-kbd">Ctrl + /</span>
+					</button>
+					<div class="tv-menu-divider"></div>
+					<a href="https://www.betabot.store/tv" target="_blank" rel="noopener" class="tv-menu-item">
+						<span>BetaBot Portal</span>
+						<span style="color:var(--text-secondary);font-size:11px;">&#8599;</span>
+					</a>
+					<a href="https://t.me/suportebetabot" target="_blank" rel="noopener" class="tv-menu-item">
+						<span>Telegram Support</span>
+						<span style="color:var(--text-secondary);font-size:11px;">&#8599;</span>
+					</a>
 				</div>
-
-				<span class="tv-sep"></span>
-
-				<!-- Custom Futures Studies -->
-				<button id="btn-study-oi" class="tv-tb-btn" data-study="OpenInterest" title="Toggle Binance Open Interest">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-6"/></svg>
-					<span>OI</span>
-				</button>
-				<button id="btn-study-funding" class="tv-tb-btn" data-study="FundingRate" title="Toggle Binance Funding Rate %">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-					<span>Funding</span>
-				</button>
-				<button id="btn-study-ls" class="tv-tb-btn" data-study="LongShortRatio" title="Toggle Global Long/Short Ratio">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-					<span>L/S</span>
-				</button>
-
-				<span class="tv-sep"></span>
-
-				<button id="btn-new-alert" class="tv-tb-btn" title="Create Price Alert (Alt+A)">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-					<span>Alert</span>
-				</button>
 			</div>
 
-			<div class="tv-topbar-group">
-				<!-- Multi-Chart Layout Dropdown -->
-				<div class="tv-dropdown">
-					<button id="btn-layout-menu" class="tv-tb-btn" title="Select Multi-Chart Layout">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
-						<span id="hdr-layout-label">1x1</span>
+			<span class="tv-topbar-gutter"></span>
+
+			<!-- Main Unified Toolbar -->
+			<div class="tv-topbar-main">
+				<div class="tv-topbar-group">
+					<!-- Symbol Search + Compare -->
+					<button id="btn-quick-search" class="tv-tb-btn tv-symbol-pill" title="Symbol Search (Ctrl+K)">
+						<span id="hdr-symbol-avatar" class="tv-hdr-avatar"></span>
+						<span id="hdr-active-symbol">BTCUSDT.P</span>
 					</button>
-					<div id="menu-layout" class="tv-menu is-right" style="min-width:230px;">
-						<div class="tv-menu-title">Chart Grid Layout</div>
-						<div class="tv-layout-grid-icons">
-							<button class="tv-layout-opt" data-layout-opt="1"><span>1x1</span><small>Single</small></button>
-							<button class="tv-layout-opt" data-layout-opt="2h"><span>2H</span><small>Side by side</small></button>
-							<button class="tv-layout-opt" data-layout-opt="2v"><span>2V</span><small>Stacked</small></button>
-							<button class="tv-layout-opt" data-layout-opt="4"><span>2x2</span><small>4 Charts</small></button>
+					<button id="btn-compare" class="tv-tb-btn is-icon" title="Compare or Add Symbol">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+					</button>
+
+					<span class="tv-sep"></span>
+
+					<!-- Timeframe Quick Strip + Full Dropdown -->
+					<div id="tv-tf-strip" class="tv-tf-strip"></div>
+					<div class="tv-dropdown">
+						<button id="btn-tf-more" class="tv-tb-btn tv-caret-btn" title="Select Timeframe">
+							<svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><path d="M2.5 4.5L6 8l3.5-3.5z"/></svg>
+						</button>
+						<div id="menu-tf" class="tv-menu" style="min-width:210px;"></div>
+					</div>
+
+					<span class="tv-sep"></span>
+
+					<!-- Chart Type Dropdown -->
+					<div class="tv-dropdown">
+						<button id="btn-chart-type" class="tv-tb-btn" title="Chart Style">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+								<path d="M7 4v16M17 4v16"/>
+								<rect x="5" y="8" width="4" height="7" fill="currentColor" opacity="0.25"/>
+								<rect x="5" y="8" width="4" height="7"/>
+								<rect x="15" y="10" width="4" height="6"/>
+							</svg>
+							<svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" style="opacity:0.7;"><path d="M2.5 4.5L6 8l3.5-3.5z"/></svg>
+						</button>
+						<div id="menu-chart-type" class="tv-menu" style="min-width:190px;">
+							<div class="tv-menu-title">Chart Style</div>
+							<button class="tv-menu-item" data-chart-type="0"><span>Bars</span><span class="tv-menu-hint">OHLC</span></button>
+							<button class="tv-menu-item is-selected" data-chart-type="1"><span>Candles</span><span class="tv-menu-hint">Default</span></button>
+							<button class="tv-menu-item" data-chart-type="9"><span>Hollow candles</span></button>
+							<button class="tv-menu-item" data-chart-type="8"><span>Heikin Ashi</span></button>
+							<button class="tv-menu-item" data-chart-type="2"><span>Line</span></button>
+							<button class="tv-menu-item" data-chart-type="3"><span>Area</span></button>
+							<button class="tv-menu-item" data-chart-type="10"><span>Baseline</span></button>
 						</div>
-						<div class="tv-menu-divider"></div>
-						<div class="tv-menu-title">Sync in Layout</div>
-						<label class="tv-menu-item" style="cursor:pointer;">
-							<span>Sync Symbol</span>
-							<input id="chk-sync-symbol" type="checkbox" />
-						</label>
-						<label class="tv-menu-item" style="cursor:pointer;">
-							<span>Sync Interval</span>
-							<input id="chk-sync-interval" type="checkbox" />
-						</label>
 					</div>
-				</div>
 
-				<!-- Save / Load Layouts Dropdown -->
-				<div class="tv-dropdown">
-					<button id="btn-saveload-menu" class="tv-tb-btn" title="Save & Manage Chart Layouts">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-						<span>Save</span>
+					<span class="tv-sep"></span>
+
+					<!-- Indicators Dialog + Futures Studies/Templates Dropdown -->
+					<button id="btn-indicators" class="tv-tb-btn" title="Indicators, Metrics &amp; Strategies">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-6 4 3 5-7 4 4"/></svg>
+						<span>Indicators</span>
 					</button>
-					<div id="menu-saveload" class="tv-menu is-right" style="min-width:250px;">
-						<button id="btn-save-layout-now" class="tv-menu-item"><strong>+ Save Current Layout...</strong></button>
-						<button id="btn-export-layout" class="tv-menu-item"><span>Export Layout JSON</span></button>
-						<div class="tv-menu-divider"></div>
-						<div class="tv-menu-title">Saved Layouts</div>
-						<div id="saved-layouts-list"></div>
+					<div class="tv-dropdown">
+						<button id="btn-indicators-menu" class="tv-tb-btn tv-caret-btn" title="Futures Studies &amp; Templates">
+							<svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><path d="M2.5 4.5L6 8l3.5-3.5z"/></svg>
+						</button>
+						<div id="menu-indicators" class="tv-menu" style="min-width:235px;">
+							<div class="tv-menu-title">Binance Futures Studies</div>
+							<button class="tv-menu-item" data-study="OpenInterest"><span>Open Interest (OHLC)</span><span class="tv-study-check"></span></button>
+							<button class="tv-menu-item" data-study="FundingRate"><span>Funding Rate %</span><span class="tv-study-check"></span></button>
+							<button class="tv-menu-item" data-study="LongShortRatio"><span>Long / Short Ratio</span><span class="tv-study-check"></span></button>
+							<div class="tv-menu-divider"></div>
+							<div class="tv-menu-title">Quick Study Templates</div>
+							<button class="tv-menu-item" data-study-pack="ema-ribbon"><span>EMA Ribbon (9 / 21 / 50 / 200)</span></button>
+							<button class="tv-menu-item" data-study-pack="scalp-pack"><span>Scalp Pack (VWAP + RSI)</span></button>
+							<div class="tv-menu-divider"></div>
+							<button class="tv-menu-item" data-study-pack="clear-studies"><span style="color:var(--down);">Remove All Indicators</span></button>
+						</div>
 					</div>
+
+					<span class="tv-sep"></span>
+
+					<!-- Alert + Replay -->
+					<button id="btn-new-alert" class="tv-tb-btn" title="Create Price Alert (Alt+A)">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+						<span>Alert</span>
+					</button>
+					<button id="btn-replay" class="tv-tb-btn" title="Bar Replay (Alt+R)">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>
+						<span>Replay</span>
+					</button>
+
+					<span class="tv-sep"></span>
+
+					<!-- Undo / Redo -->
+					<button id="btn-undo" class="tv-tb-btn is-icon" title="Undo (Ctrl+Z)" disabled>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+					</button>
+					<button id="btn-redo" class="tv-tb-btn is-icon" title="Redo (Ctrl+Y)" disabled>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+					</button>
 				</div>
 
-				<span class="tv-sep"></span>
+				<!-- Right Toolbar Group -->
+				<div class="tv-topbar-group">
+					<!-- Live Price Pill (compact) -->
+					<div class="tv-live-badge" title="Active Symbol 24h Live Price">
+						<span id="hdr-active-price">--</span>
+						<span id="hdr-active-chg" class="is-neutral">--</span>
+					</div>
 
-				<button id="btn-ticker-toggle" class="tv-tb-btn is-icon" title="Toggle Top Ticker Tape">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="5" rx="1"/><rect x="2" y="12" width="20" height="8" rx="1"/></svg>
-				</button>
+					<!-- Multi-Chart Layout Dropdown -->
+					<div class="tv-dropdown">
+						<button id="btn-layout-menu" class="tv-tb-btn" title="Layout Setup">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+							<span id="hdr-layout-label">1x1</span>
+						</button>
+						<div id="menu-layout" class="tv-menu is-right" style="min-width:240px;">
+							<div class="tv-menu-title">Chart Grid Layout</div>
+							<div class="tv-layout-grid-icons">
+								<button class="tv-layout-opt" data-layout-opt="1"><span>1x1</span><small>Single</small></button>
+								<button class="tv-layout-opt" data-layout-opt="2h"><span>2H</span><small>Side by side</small></button>
+								<button class="tv-layout-opt" data-layout-opt="2v"><span>2V</span><small>Stacked</small></button>
+								<button class="tv-layout-opt" data-layout-opt="3"><span>1+2</span><small>3 Charts</small></button>
+								<button class="tv-layout-opt" data-layout-opt="4"><span>2x2</span><small>4 Charts</small></button>
+							</div>
+							<div class="tv-menu-divider"></div>
+							<div class="tv-menu-title">Sync in Layout</div>
+							<label class="tv-menu-item" style="cursor:pointer;">
+								<span>Sync Symbol</span>
+								<input id="chk-sync-symbol" type="checkbox" />
+							</label>
+							<label class="tv-menu-item" style="cursor:pointer;">
+								<span>Sync Interval</span>
+								<input id="chk-sync-interval" type="checkbox" />
+							</label>
+						</div>
+					</div>
 
-				<button id="btn-locale-toggle" class="tv-tb-btn" title="Switch Language (PT / EN)">PT</button>
+					<!-- Save / Manage Layouts -->
+					<div class="tv-dropdown" style="display:flex;align-items:center;">
+						<button id="btn-save-quick" class="tv-tb-btn" title="Quick Save Layout">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+							<span>Save</span>
+						</button>
+						<button id="btn-saveload-menu" class="tv-tb-btn tv-caret-btn" title="Manage Layouts">
+							<svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><path d="M2.5 4.5L6 8l3.5-3.5z"/></svg>
+						</button>
+						<div id="menu-saveload" class="tv-menu is-right" style="min-width:255px;">
+							<button id="btn-save-layout-now" class="tv-menu-item"><strong>+ Save Layout As...</strong></button>
+							<button id="btn-export-layout" class="tv-menu-item"><span>Export Layout JSON</span></button>
+							<button id="btn-import-layout" class="tv-menu-item"><span>Import Layout JSON...</span></button>
+							<input id="file-import-layout" type="file" accept="application/json,.json" style="display:none;" />
+							<div class="tv-menu-divider"></div>
+							<div class="tv-menu-title">Saved Layouts</div>
+							<div id="saved-layouts-list"></div>
+						</div>
+					</div>
 
-				<button id="btn-theme-toggle" class="tv-tb-btn is-icon" title="Toggle Dark / Light Theme">
-					<svg id="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-					<svg id="icon-theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-				</button>
+					<span class="tv-sep"></span>
 
-				<button id="btn-snapshot" class="tv-tb-btn is-icon" title="Take Chart Snapshot">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-				</button>
-
-				<button id="btn-fullscreen" class="tv-tb-btn is-icon" title="Fullscreen Mode">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-				</button>
+					<button id="btn-search-icon" class="tv-tb-btn is-icon" title="Quick Search (Ctrl+K)">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+					</button>
+					<button id="btn-chart-settings" class="tv-tb-btn is-icon" title="Chart Settings">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+					</button>
+					<button id="btn-fullscreen" class="tv-tb-btn is-icon" title="Fullscreen Mode">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+					</button>
+					<button id="btn-snapshot" class="tv-tb-btn is-icon" title="Take a Snapshot">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+					</button>
+					<button id="btn-trade-pill" class="tv-trade-pill" title="Paper Trading Panel (Alt+T)">Trade</button>
+				</div>
 			</div>
 		</header>
 
 		<!-- Main Workspace -->
 		<div class="tv-workspace">
-			<!-- Center Charts + Bottom Drawer -->
+			<!-- Center Charts + Floating Overlays + Bottom Drawer -->
 			<main class="tv-center-col">
-				<div id="charts-grid" class="tv-charts-grid" data-layout="1"></div>
+				<div class="tv-chart-stage">
+					<div id="charts-grid" class="tv-charts-grid" data-layout="1"></div>
+
+					<!-- TradingView Floating Instant Buy / Sell Buttons -->
+					<div id="tv-buysell-overlay" class="tv-buysell-overlay">
+						<button id="ov-sell-btn" class="tv-bs-btn is-sell" title="1-Click Market Short (Paper)">
+							<span id="ov-sell-px" class="tv-bs-px">--</span>
+							<span class="tv-bs-lbl">SELL</span>
+						</button>
+						<input id="ov-qty-input" class="tv-bs-qty" type="number" min="10" step="50" value="250" title="Order Margin (USDT)" />
+						<button id="ov-buy-btn" class="tv-bs-btn is-buy" title="1-Click Market Long (Paper)">
+							<span id="ov-buy-px" class="tv-bs-px">--</span>
+							<span class="tv-bs-lbl">BUY</span>
+						</button>
+					</div>
+
+					<!-- TradingView Bar Replay Floating Bar -->
+					<div id="tv-replay-bar" class="tv-replay-bar" style="display:none;">
+						<span id="rp-status" class="tv-rp-status">Replay</span>
+						<button id="rp-jump" class="tv-tb-btn" title="Select another bar">Jump to</button>
+						<button id="rp-play" class="tv-tb-btn is-icon" title="Play / Pause">&#9654;</button>
+						<button id="rp-step" class="tv-tb-btn is-icon" title="Step Forward">&#9197;</button>
+						<select id="rp-speed" class="tv-select" style="width:auto;padding:2px 6px;font-size:11px;" title="Replay Speed">
+							<option value="1200">0.5x</option>
+							<option value="600" selected>1x</option>
+							<option value="250">2x</option>
+							<option value="100">5x</option>
+						</select>
+						<button id="rp-exit" class="tv-tb-btn is-icon" title="Exit Replay">&times;</button>
+					</div>
+				</div>
+
 				<div id="bottom-resizer" class="tv-bottom-resizer" style="display:none;"></div>
-				<section id="bottom-drawer" class="tv-bottom-drawer" aria-label="Trading & Screener Drawer"></section>
+				<section id="bottom-drawer" class="tv-bottom-drawer" aria-label="Trading &amp; Screener Drawer"></section>
 			</main>
 
 			<!-- Right Panel Resize Handle -->
 			<div id="right-resizer" class="tv-right-resizer"></div>
 
-			<!-- Right Widgetbar Panel -->
+			<!-- Right Widgetbar Panel (300px) -->
 			<aside id="right-panel" class="tv-right-panel" aria-label="Market Panel">
 				<div id="view-watchlist" class="tv-panel-view is-active"></div>
 				<div id="view-alerts" class="tv-panel-view"></div>
@@ -162,36 +325,36 @@
 			<!-- Far-Right Icon Rail (46px) -->
 			<nav class="tv-rail" aria-label="Workspace Tools">
 				<div class="tv-rail-group">
-					<button class="tv-rail-btn is-active" data-rail-tab="watchlist" title="Watchlist, Details & Technicals">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+					<button class="tv-rail-btn is-active" data-rail-tab="watchlist" title="Watchlist &amp; Details">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14a1 1 0 0 1 1 1v15l-8-4-8 4V5a1 1 0 0 1 1-1z"/></svg>
 					</button>
-					<button class="tv-rail-btn" data-rail-tab="alerts" title="Price Alerts">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+					<button class="tv-rail-btn" data-rail-tab="alerts" title="Alerts">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M5 3L2 6M22 6l-3-3"/></svg>
 						<span id="rail-alerts-badge" class="tv-rail-badge" style="display:none;">0</span>
 					</button>
-					<button class="tv-rail-btn" data-rail-tab="orderbook" title="Live Order Book & Trades">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M4 15h10M4 11h16M4 7h12"/></svg>
+					<button class="tv-rail-btn" data-rail-tab="objects" title="Object Tree &amp; Data Window">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
 					</button>
-					<button class="tv-rail-btn" data-rail-tab="objects" title="Object Tree">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+					<button class="tv-rail-btn" data-rail-tab="orderbook" title="Order Book &amp; Market Trades">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M4 15h10M4 11h16M4 7h12"/></svg>
 					</button>
 
 					<div class="tv-rail-sep"></div>
 
-					<button id="rail-btn-screener" class="tv-rail-btn" title="Binance Futures Screener">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6M11 8v6"/></svg>
+					<button id="rail-btn-screener" class="tv-rail-btn" title="Crypto Futures Screener">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6M11 8v6"/></svg>
 					</button>
 					<button id="rail-btn-paper" class="tv-rail-btn" title="Paper Trading Simulator (Alt+T)">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
 					</button>
 				</div>
 
 				<div class="tv-rail-group">
-					<button id="rail-btn-shortcuts" class="tv-rail-btn" title="Keyboard Shortcuts">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+					<button id="rail-btn-shortcuts" class="tv-rail-btn" title="Keyboard Shortcuts (Ctrl+/)">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
 					</button>
 					<a href="https://t.me/suportebetabot" target="_blank" rel="noopener" class="tv-rail-btn" title="BetaBot Support on Telegram">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
 					</a>
 				</div>
 			</nav>

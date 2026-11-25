@@ -89,10 +89,10 @@ export function createAlertsPanel({
 		});
 	}
 
-	function openCreateAlertModal(defaultSym) {
+	function openCreateAlertModal(defaultSym, defaultPrice) {
 		const sym = normalizeSymbol(defaultSym || getActiveSymbol());
 		const ticker = marketHub.getTicker(sym);
-		const currentPrice = ticker ? ticker.last : '';
+		const currentPrice = Number.isFinite(Number(defaultPrice)) ? Number(defaultPrice) : (ticker ? ticker.last : '');
 
 		const form = document.createElement('form');
 		form.style.display = 'flex';
@@ -212,5 +212,17 @@ export function createAlertsPanel({
 			if (onLogUpdated) onLogUpdated([]);
 		},
 		openCreateAlertModal,
+		updateAlertPrice(id, newPrice) {
+			const al = alerts.find((a) => a.id === id);
+			const px = Number(newPrice);
+			if (!al || !Number.isFinite(px)) return;
+			al.price = px;
+			persist();
+			showToast({ title: 'Alert Moved', message: `${formatDisplaySymbol(al.symbol)} @ ${formatPriceForSymbol(px, al.symbol)}` });
+		},
+		deleteAlert(id) {
+			alerts = alerts.filter((a) => a.id !== id);
+			persist();
+		},
 	};
 }

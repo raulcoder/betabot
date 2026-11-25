@@ -41,6 +41,13 @@ export function formatDisplaySymbol(raw) {
 	return `${sym}.P`;
 }
 
+export function getCoinIconBase(raw) {
+	const sym = normalizeSymbol(raw);
+	let base = sym.replace(/(USDT|BUSD|USDC)$/i, '');
+	base = base.replace(/^1000+/, '');
+	return (base || 'btc').toLowerCase();
+}
+
 export function resolutionToBinance(resolution) {
 	const res = String(resolution || '5').trim();
 	if (res === 'M' || res === '1M') return '1M';

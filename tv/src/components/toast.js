@@ -1,3 +1,5 @@
+import { formatPriceForSymbol, getCoinIconBase } from '../services/binanceApi.js';
+
 export function showToast({ title, message, tone = 'info', duration = 4200 }) {
 	const stack = document.getElementById('toast-stack');
 	if (!stack) return;
@@ -62,4 +64,42 @@ export function playAlertBeep() {
 	} catch {
 		// ignore audio block
 	}
+}
+
+const AVATAR_PALETTE = [
+	'#F7931A',
+	'#627EEA',
+	'#089981',
+	'#2962FF',
+	'#E040FB',
+	'#F0B90B',
+	'#00B8D9',
+	'#F23645',
+];
+
+function avatarColorFor(base) {
+	let hash = 0;
+	for (let i = 0; i < base.length; i++) {
+		hash = (hash * 31 + base.charCodeAt(i)) | 0;
+	}
+	return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+
+export function getCoinAvatarHtml(symbol, size = 18) {
+	const base = getCoinIconBase(symbol);
+	const letter = escapeHtml((base[0] || '?').toUpperCase());
+	const bg = avatarColorFor(base);
+	const fontSize = Math.max(9, Math.round(size * 0.54));
+	return `<span class="tv-coin-avatar" style="width:${size}px;height:${size}px;background:${bg};font-size:${fontSize}px;"><span>${letter}</span><img src="../icons/${encodeURIComponent(base)}.png" alt="" loading="lazy" onerror="this.remove()" /></span>`;
+}
+
+export function formatSplitPriceHtml(price, symbol, dir = 0) {
+	const str = formatPriceForSymbol(price, symbol);
+	if (!str || str === '--' || str.length < 3 || dir === 0) {
+		return escapeHtml(str);
+	}
+	const head = escapeHtml(str.slice(0, -2));
+	const tail = escapeHtml(str.slice(-2));
+	const cls = dir > 0 ? 'is-up' : 'is-down';
+	return `${head}<span class="tv-px-tail ${cls}">${tail}</span>`;
 }

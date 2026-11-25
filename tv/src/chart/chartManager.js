@@ -1,17 +1,26 @@
 import Datafeed from '../services/datafeed.js';
-import { formatDisplaySymbol, formatPriceForSymbol, normalizeSymbol } from '../services/binanceApi.js';
+import {
+	formatDisplaySymbol,
+	formatPriceForSymbol,
+	getKlines,
+	normalizeSymbol,
+	resolutionToBinance,
+} from '../services/binanceApi.js';
+import { replayController } from '../services/replayController.js';
 import { storage } from '../services/storage.js';
 import { getCustomIndicators } from './customIndicators.js';
 
 function getThemeOverrides(theme) {
 	const dark = theme === 'dark';
 	return {
-		'paneProperties.background': dark ? '#131722' : '#FFFFFF',
-		'paneProperties.vertGridProperties.color': dark ? '#1E222D' : '#F0F3FA',
-		'paneProperties.horzGridProperties.color': dark ? '#1E222D' : '#F0F3FA',
-		'scalesProperties.backgroundColor': dark ? '#131722' : '#FFFFFF',
-		'scalesProperties.textColor': dark ? '#787B86' : '#6A6D78',
-		'scalesProperties.lineColor': dark ? '#2A2E39' : '#E0E3EB',
+		'paneProperties.background': dark ? '#000000' : '#FFFFFF',
+		'paneProperties.backgroundType': 'solid',
+		'paneProperties.vertGridProperties.color': dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(42, 46, 57, 0.06)',
+		'paneProperties.horzGridProperties.color': dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(42, 46, 57, 0.06)',
+		'scalesProperties.backgroundColor': dark ? '#000000' : '#FFFFFF',
+		'scalesProperties.textColor': dark ? '#8C8C8C' : '#6A6D78',
+		'scalesProperties.lineColor': dark ? '#2E2E2E' : '#E0E3EB',
+		'crossHairProperties.color': dark ? '#758696' : '#9598A1',
 		'mainSeriesProperties.candleStyle.upColor': '#089981',
 		'mainSeriesProperties.candleStyle.downColor': '#F23645',
 		'mainSeriesProperties.candleStyle.borderUpColor': '#089981',
@@ -39,6 +48,7 @@ const LAYOUT_PANE_COUNT = {
 	'1': 1,
 	'2h': 2,
 	'2v': 2,
+	'3': 3,
 	'4': 4,
 };
 
@@ -51,9 +61,31 @@ export class ChartManager {
 		this.sync = storage.getSync();
 		this.panesState = storage.getPanes();
 		this.activePaneIndex = 0;
-		this.instances = []; // { index, paneEl, badgeEl, mountEl, widget, ready, lines: [] }
+		this.instances = [];
 		this.listeners = new Map();
 		this._syncLock = false;
+		this._contextHandlers = {};
+		this._lineHandlers = {};
+		this._lastLinesArgs = { alerts: [], positions: [], orders: [] };
+
+		// Optional URL override (?symbol=ETHUSDT&interval=15)
+		try {
+			const params = new URLSearchParams(window.location.search);
+			const urlSym = params.get('symbol');
+			const urlInt = params.get('interval');
+			if (urlSym) {
+				this.panesState[0].symbol = normalizeSymbol(urlSym);
+				this.panesState[0].savedState = null;
+			}
+			if (urlInt) {
+				this.panesState[0].interval = urlInt;
+			}
+			if (urlSym || urlInt) {
+				this.persistPanes();
+			}
+		} catch {
+			// ignore query parse errors
+		}
 	}
 
 	on(event, cb) {
@@ -68,6 +100,14 @@ export class ChartManager {
 		for (const cb of set) {
 			try { cb(detail); } catch (err) { console.error(err); }
 		}
+	}
+
+	setContextHandlers(handlers) {
+		this._contextHandlers = handlers || {};
+	}
+
+	setLineHandlers(handlers) {
+		this._lineHandlers = handlers || {};
 	}
 
 	init() {
@@ -165,9 +205,9 @@ export class ChartManager {
 			locale: this.locale,
 			timezone: 'America/Sao_Paulo',
 			theme: isDark ? 'Dark' : 'Light',
-			toolbar_bg: isDark ? '#131722' : '#FFFFFF',
+			toolbar_bg: isDark ? '#000000' : '#FFFFFF',
 			loading_screen: {
-				backgroundColor: isDark ? '#131722' : '#FFFFFF',
+				backgroundColor: isDark ? '#000000' : '#FFFFFF',
 				foregroundColor: '#2962FF',
 			},
 			overrides: getThemeOverrides(this.theme),
@@ -189,7 +229,6 @@ export class ChartManager {
 				'use_localstorage_for_settings',
 				'save_chart_properties_to_local_storage',
 				'side_toolbar_in_fullscreen_mode',
-				'header_in_fullscreen_mode',
 				'show_interval_dialog_on_key_press',
 				'create_volume_indicator_by_default',
 				'items_favoriting',
@@ -199,6 +238,7 @@ export class ChartManager {
 				'cropped_tick_marks',
 			],
 			disabled_features: [
+				'header_widget',
 				'header_saveload',
 				'study_templates',
 				'border_around_the_chart',
@@ -223,7 +263,6 @@ export class ChartManager {
 
 		widget.onChartReady(() => {
 			instance.ready = true;
-			// Ensure theme matches current manager theme if toggled during widget boot
 			const expectedTvTheme = this.theme === 'dark' ? 'Dark' : 'Light';
 			try {
 				if (typeof widget.getTheme === 'function' && widget.getTheme() !== expectedTvTheme) {
@@ -266,17 +305,72 @@ export class ChartManager {
 				}
 			});
 
+			try {
+				chart.onChartTypeChanged().subscribe(null, (chartType) => {
+					if (instance.index === this.activePaneIndex) {
+						this.emit('active-chart-type-changed', chartType);
+					}
+				});
+			} catch { /* ignore */ }
+
+			try {
+				chart.crossHairMoved((params) => {
+					if (instance.index === this.activePaneIndex) {
+						this.emit('crosshair-moved', params);
+					}
+				});
+			} catch { /* ignore */ }
+
+			try {
+				widget.onContextMenu((unixTime, price) => {
+					if (!Number.isFinite(price)) return [];
+					const sym = normalizeSymbol(chart.symbol());
+					const disp = formatDisplaySymbol(sym);
+					const pxStr = formatPriceForSymbol(price, sym);
+					return [
+						{
+							position: 'top',
+							text: `Add Alert on ${disp} @ ${pxStr}`,
+							click: () => this._contextHandlers.onAddAlert?.(sym, price),
+						},
+						{
+							position: 'top',
+							text: `Buy Limit ${disp} @ ${pxStr}`,
+							click: () => this._contextHandlers.onQuickLimit?.(sym, 'LONG', price),
+						},
+						{
+							position: 'top',
+							text: `Sell Limit ${disp} @ ${pxStr}`,
+							click: () => this._contextHandlers.onQuickLimit?.(sym, 'SHORT', price),
+						},
+					];
+				});
+			} catch { /* ignore */ }
+
 			widget.subscribe('onAutoSaveNeeded', () => {
 				this.savePaneSnapshot(instance.index);
+				this.emit('undo-redo-changed');
 			});
 
-			widget.subscribe('study', () => this.emit('objects-changed'));
-			widget.subscribe('drawing', () => this.emit('objects-changed'));
+			widget.subscribe('study', () => {
+				this.emit('objects-changed');
+				this.emit('undo-redo-changed');
+			});
+			widget.subscribe('drawing', () => {
+				this.emit('objects-changed');
+				this.emit('undo-redo-changed');
+			});
+			widget.subscribe('undo_redo_state_changed', () => {
+				this.emit('undo-redo-changed');
+			});
 
 			if (instance.index === this.activePaneIndex) {
 				this.emit('active-chart-ready', instance);
 				this.emit('active-symbol-changed', this.getActiveSymbol());
+				this.emit('active-interval-changed', this.getActiveInterval());
+				this.emit('active-chart-type-changed', this.getChartType());
 				this.emit('objects-changed');
+				this.emit('undo-redo-changed');
 			}
 		});
 	}
@@ -288,8 +382,11 @@ export class ChartManager {
 			inst.paneEl.classList.toggle('is-active', inst.index === index);
 		}
 		this.emit('active-symbol-changed', this.getActiveSymbol());
+		this.emit('active-interval-changed', this.getActiveInterval());
+		this.emit('active-chart-type-changed', this.getChartType());
 		this.emit('active-chart-ready', this.getActivePane());
 		this.emit('objects-changed');
+		this.emit('undo-redo-changed');
 	}
 
 	syncOtherPanesSymbol(sourceIdx, symbol) {
@@ -334,6 +431,9 @@ export class ChartManager {
 		const disp = formatDisplaySymbol(clean);
 		const inst = this.instances[paneIndex];
 		if (!inst) return;
+		if (replayController.active && replayController.symbol !== clean) {
+			replayController.stop();
+		}
 		this.panesState[paneIndex].symbol = clean;
 		inst.badgeEl.textContent = `${disp} · ${this.panesState[paneIndex].interval}`;
 		this.persistPanes();
@@ -361,6 +461,9 @@ export class ChartManager {
 		}
 		if (this.sync.interval) {
 			this.syncOtherPanesInterval(paneIndex, resolution);
+		}
+		if (paneIndex === this.activePaneIndex) {
+			this.emit('active-interval-changed', resolution);
 		}
 	}
 
@@ -392,6 +495,101 @@ export class ChartManager {
 		this.locale = locale === 'en' ? 'en' : 'pt';
 		storage.setLocale(this.locale);
 		this.saveAllPanesState(() => this.renderLayout());
+	}
+
+	executeAction(actionId) {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return false;
+		try {
+			inst.widget.activeChart().executeActionById(actionId);
+			setTimeout(() => this.emit('undo-redo-changed'), 120);
+			return true;
+		} catch (err) {
+			console.warn('[chartManager] executeAction:', actionId, err);
+			return false;
+		}
+	}
+
+	toggleDrawingsPanel() {
+		return this.executeAction('drawingToolbarAction');
+	}
+
+	isDrawingsPanelVisible() {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return true;
+		try {
+			return Boolean(inst.widget.activeChart().getCheckableActionState('drawingToolbarAction'));
+		} catch {
+			return true;
+		}
+	}
+
+	setChartType(style) {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return;
+		try {
+			inst.widget.activeChart().setChartType(Number(style));
+			this.emit('active-chart-type-changed', Number(style));
+		} catch (err) {
+			console.warn('[chartManager] setChartType:', err);
+		}
+	}
+
+	getChartType() {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return 1;
+		try {
+			return inst.widget.activeChart().chartType();
+		} catch {
+			return 1;
+		}
+	}
+
+	getUndoRedoState() {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return { enableUndo: false, enableRedo: false };
+		try {
+			return inst.widget.undoRedoState();
+		} catch {
+			return { enableUndo: false, enableRedo: false };
+		}
+	}
+
+	async applyStudyPack(packName) {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return;
+		const chart = inst.widget.activeChart();
+
+		if (packName === 'clear-studies') {
+			chart.removeAllStudies();
+			this.emit('objects-changed');
+			return;
+		}
+
+		if (packName === 'ema-ribbon') {
+			const configs = [
+				{ len: 9, color: '#2962FF' },
+				{ len: 21, color: '#FF9800' },
+				{ len: 50, color: '#E040FB' },
+				{ len: 200, color: '#089981' },
+			];
+			for (const c of configs) {
+				try {
+					await chart.createStudy('Moving Average Exponential', false, false, [c.len], {
+						'plot.color': c.color,
+						'plot.linewidth': 2,
+					});
+				} catch { /* ignore */ }
+			}
+			this.emit('objects-changed');
+			return;
+		}
+
+		if (packName === 'scalp-pack') {
+			try { await chart.createStudy('VWAP', false, false); } catch { /* ignore */ }
+			try { await chart.createStudy('Relative Strength Index', false, false, [14]); } catch { /* ignore */ }
+			this.emit('objects-changed');
+		}
 	}
 
 	async toggleCustomStudy(studyName) {
@@ -427,6 +625,26 @@ export class ChartManager {
 		};
 	}
 
+	setEntityVisibility(id, visible) {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return;
+		try {
+			inst.widget.activeChart().setEntityVisibility(id, Boolean(visible));
+		} catch (err) {
+			console.warn('[chartManager] setEntityVisibility:', err);
+		}
+	}
+
+	openEntitySettings(id) {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return;
+		try {
+			inst.widget.activeChart().showPropertiesDialog(id);
+		} catch (err) {
+			console.warn('[chartManager] showPropertiesDialog:', err);
+		}
+	}
+
 	removeEntity(id) {
 		const inst = this.getActivePane();
 		if (!inst || !inst.ready) return;
@@ -438,19 +656,98 @@ export class ChartManager {
 		}
 	}
 
+	removeAllShapes() {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return;
+		try {
+			inst.widget.activeChart().removeAllShapes();
+			this.emit('objects-changed');
+		} catch (err) {
+			console.warn('[chartManager] removeAllShapes:', err);
+		}
+	}
+
+	async beginReplaySelection() {
+		const inst = this.getActivePane();
+		if (!inst || !inst.ready) return { ok: false, reason: 'chart_not_ready' };
+		const chart = inst.widget.activeChart();
+		const sym = this.getActiveSymbol();
+		const res = chart.resolution();
+		const binInterval = resolutionToBinance(res);
+
+		replayController.setSelecting(true);
+		try {
+			const selectedSec = await chart.requestSelectBar();
+			if (!selectedSec || !Number.isFinite(selectedSec)) {
+				replayController.setSelecting(false);
+				return { ok: false, reason: 'cancelled' };
+			}
+
+			const futureBars = [];
+			let cursorStart = Number(selectedSec) * 1000 + 1;
+			const nowMs = Date.now();
+			let safety = 0;
+
+			while (cursorStart < nowMs && safety < 4) {
+				safety++;
+				const raw = await getKlines(sym, binInterval, {
+					startTime: cursorStart,
+					endTime: nowMs,
+					limit: 1000,
+				});
+				if (!Array.isArray(raw) || !raw.length) break;
+				const chunk = raw.map((k) => ({
+					time: Number(k[0]),
+					open: parseFloat(k[1]),
+					high: parseFloat(k[2]),
+					low: parseFloat(k[3]),
+					close: parseFloat(k[4]),
+					volume: parseFloat(k[5]),
+				}));
+				futureBars.push(...chunk);
+				const lastTime = chunk[chunk.length - 1].time;
+				if (raw.length < 1000 || lastTime <= cursorStart) break;
+				cursorStart = lastTime + 1;
+			}
+
+			replayController.start(sym, res, Number(selectedSec), futureBars);
+			chart.resetData();
+			return { ok: true, count: futureBars.length, cutoffSec: selectedSec };
+		} catch (err) {
+			replayController.setSelecting(false);
+			return { ok: false, reason: err?.message || 'cancelled' };
+		}
+	}
+
+	cancelReplaySelection() {
+		const inst = this.getActivePane();
+		if (inst?.ready) {
+			try { inst.widget.activeChart().cancelSelectBar(); } catch { /* ignore */ }
+		}
+		replayController.setSelecting(false);
+	}
+
+	exitReplay() {
+		const inst = this.getActivePane();
+		replayController.stop();
+		if (inst?.ready) {
+			try { inst.widget.activeChart().resetData(); } catch { /* ignore */ }
+		}
+	}
+
 	syncChartLines(alerts = [], positions = [], orders = []) {
+		this._lastLinesArgs = { alerts, positions, orders };
 		const inst = this.getActivePane();
 		if (!inst || !inst.ready) return;
 		const chart = inst.widget.activeChart();
 		const activeSym = this.getActiveSymbol();
 
-		// Clear previous lines
 		for (const line of inst.lines) {
 			try { line.remove(); } catch { /* ignore */ }
 		}
 		inst.lines = [];
 
-		// Render active price alerts for active symbol
+		// Active Price Alerts
 		for (const al of alerts) {
 			if (!al.active || normalizeSymbol(al.symbol) !== activeSym) continue;
 			try {
@@ -461,18 +758,25 @@ export class ChartManager {
 					.setQuantity('')
 					.setLineStyle(2)
 					.setLineColor('#F7931A')
-					.setBodyBackgroundColor('#1E222D')
+					.setBodyBackgroundColor('#1F1F1F')
 					.setBodyTextColor('#F7931A')
 					.setBodyBorderColor('#F7931A')
-					.setCancelButtonBackgroundColor('#1E222D')
+					.setCancelButtonBackgroundColor('#1F1F1F')
 					.setCancelButtonIconColor('#F7931A');
+				try {
+					line.onMove(() => {
+						const newPx = line.getPrice();
+						this._lineHandlers.onMoveAlert?.(al.id, newPx);
+					});
+					line.onCancel(() => {
+						this._lineHandlers.onCancelAlert?.(al.id);
+					});
+				} catch { /* ignore */ }
 				inst.lines.push(line);
-			} catch {
-				// some CL builds restrict order lines
-			}
+			} catch { /* ignore */ }
 		}
 
-		// Render open paper positions
+		// Open Paper Positions + TP/SL
 		for (const pos of positions) {
 			if (normalizeSymbol(pos.symbol) !== activeSym) continue;
 			const isLong = pos.side === 'LONG';
@@ -487,9 +791,13 @@ export class ChartManager {
 					.setBodyBackgroundColor(color)
 					.setBodyTextColor('#FFFFFF')
 					.setBodyBorderColor(color)
-					.setQuantityBackgroundColor('#1E222D')
-					.setQuantityTextColor('#D1D4DC')
+					.setQuantityBackgroundColor('#1F1F1F')
+					.setQuantityTextColor('#DBDBDB')
 					.setQuantityBorderColor(color);
+				try {
+					posLine.onClose(() => this._lineHandlers.onClosePosition?.(pos.id));
+					posLine.onReverse(() => this._lineHandlers.onReversePosition?.(pos.id));
+				} catch { /* ignore */ }
 				inst.lines.push(posLine);
 
 				if (pos.tp) {
@@ -500,9 +808,13 @@ export class ChartManager {
 						.setQuantity(formatPriceForSymbol(pos.tp, activeSym))
 						.setLineStyle(2)
 						.setLineColor('#089981')
-						.setBodyBackgroundColor('#131722')
+						.setBodyBackgroundColor('#0A0A0A')
 						.setBodyTextColor('#089981')
 						.setBodyBorderColor('#089981');
+					try {
+						tpLine.onMove(() => this._lineHandlers.onMoveTpSl?.(pos.id, 'tp', tpLine.getPrice()));
+						tpLine.onCancel(() => this._lineHandlers.onMoveTpSl?.(pos.id, 'tp', null));
+					} catch { /* ignore */ }
 					inst.lines.push(tpLine);
 				}
 
@@ -514,17 +826,19 @@ export class ChartManager {
 						.setQuantity(formatPriceForSymbol(pos.sl, activeSym))
 						.setLineStyle(2)
 						.setLineColor('#F23645')
-						.setBodyBackgroundColor('#131722')
+						.setBodyBackgroundColor('#0A0A0A')
 						.setBodyTextColor('#F23645')
 						.setBodyBorderColor('#F23645');
+					try {
+						slLine.onMove(() => this._lineHandlers.onMoveTpSl?.(pos.id, 'sl', slLine.getPrice()));
+						slLine.onCancel(() => this._lineHandlers.onMoveTpSl?.(pos.id, 'sl', null));
+					} catch { /* ignore */ }
 					inst.lines.push(slLine);
 				}
-			} catch {
-				// ignore if unsupported
-			}
+			} catch { /* ignore */ }
 		}
 
-		// Render pending limit orders
+		// Pending Limit Orders
 		for (const ord of orders) {
 			if (normalizeSymbol(ord.symbol) !== activeSym) continue;
 			const color = ord.side === 'LONG' ? '#2962FF' : '#F23645';
@@ -536,13 +850,15 @@ export class ChartManager {
 					.setQuantity(`$${ord.marginUsd}`)
 					.setLineStyle(1)
 					.setLineColor(color)
-					.setBodyBackgroundColor('#1E222D')
+					.setBodyBackgroundColor('#1F1F1F')
 					.setBodyTextColor(color)
 					.setBodyBorderColor(color);
+				try {
+					oLine.onMove(() => this._lineHandlers.onMoveOrder?.(ord.id, oLine.getPrice()));
+					oLine.onCancel(() => this._lineHandlers.onCancelOrder?.(ord.id));
+				} catch { /* ignore */ }
 				inst.lines.push(oLine);
-			} catch {
-				// ignore
-			}
+			} catch { /* ignore */ }
 		}
 	}
 
@@ -554,9 +870,7 @@ export class ChartManager {
 				this.panesState[index].savedState = json;
 				this.persistPanes();
 			});
-		} catch {
-			// ignore
-		}
+		} catch { /* ignore */ }
 	}
 
 	saveAllPanesState(done) {
@@ -612,9 +926,29 @@ export class ChartManager {
 		const list = storage.getSavedLayouts();
 		const found = list.find((l) => l.id === id);
 		if (!found) return false;
-		this.layoutType = found.layoutType || '1';
+		this.layoutType = LAYOUT_PANE_COUNT[found.layoutType] ? found.layoutType : '1';
 		storage.setLayoutType(this.layoutType);
 		this.panesState = structuredClone(found.panes);
+		this.persistPanes();
+		this.activePaneIndex = 0;
+		this.renderLayout();
+		this.emit('layout-changed', this.layoutType);
+		return true;
+	}
+
+	importLayoutJson(parsed) {
+		if (!parsed || !Array.isArray(parsed.panes) || !parsed.panes.length) return false;
+		const layoutType = LAYOUT_PANE_COUNT[parsed.layoutType] ? parsed.layoutType : '1';
+		this.layoutType = layoutType;
+		storage.setLayoutType(layoutType);
+		this.panesState = parsed.panes.slice(0, 4).map((p, idx) => ({
+			symbol: normalizeSymbol(p?.symbol || ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT'][idx]),
+			interval: String(p?.interval || '5'),
+			savedState: p?.savedState && typeof p.savedState === 'object' ? p.savedState : null,
+		}));
+		while (this.panesState.length < 4) {
+			this.panesState.push({ symbol: 'BTCUSDT', interval: '5', savedState: null });
+		}
 		this.persistPanes();
 		this.activePaneIndex = 0;
 		this.renderLayout();
@@ -646,7 +980,7 @@ export class ChartManager {
 		try {
 			if (typeof inst.widget.takeClientScreenshot === 'function') {
 				const canvas = await inst.widget.takeClientScreenshot({
-					backgroundColor: this.theme === 'dark' ? '#131722' : '#FFFFFF',
+					backgroundColor: this.theme === 'dark' ? '#000000' : '#FFFFFF',
 				});
 				return canvas.toDataURL('image/png');
 			}

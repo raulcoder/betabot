@@ -9,10 +9,11 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 	let tradeWs = null;
 	let lastBook = { bids: [], asks: [] };
 	let trades = [];
+	let renderTimer = null;
 
 	rootEl.innerHTML = `
 		<div class="tv-panel-header">
-			<span class="tv-panel-title">Order Book & Trades</span>
+			<span class="tv-panel-title">Order Book &amp; Trades</span>
 			<span id="ob-sym-label" style="font-size:11px;color:var(--text-secondary);">--</span>
 		</div>
 		<div class="tv-ob-subtabs">
@@ -35,7 +36,19 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 		});
 	});
 
+	function scheduleRender() {
+		if (renderTimer !== null) return;
+		renderTimer = window.setTimeout(() => {
+			renderTimer = null;
+			if (active) render();
+		}, 150);
+	}
+
 	function disconnect() {
+		if (renderTimer !== null) {
+			clearTimeout(renderTimer);
+			renderTimer = null;
+		}
 		if (depthWs) {
 			try { depthWs.onclose = null; depthWs.close(); } catch { /* ignore */ }
 			depthWs = null;
@@ -65,7 +78,7 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 						bids: d.b.slice(0, 14).map(([p, q]) => [parseFloat(p), parseFloat(q)]),
 						asks: d.a.slice(0, 14).map(([p, q]) => [parseFloat(p), parseFloat(q)]),
 					};
-					if (subTab === 'book') renderBook();
+					if (subTab === 'book') scheduleRender();
 				}
 			} catch { /* ignore */ }
 		};
@@ -85,7 +98,7 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 					time: new Date(d.T).toLocaleTimeString('en-GB', { hour12: false }),
 				});
 				if (trades.length > 45) trades.length = 45;
-				if (subTab === 'trades') renderTrades();
+				if (subTab === 'trades') scheduleRender();
 			} catch { /* ignore */ }
 		};
 	}
@@ -115,7 +128,7 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 			<div class="tv-ob-cols"><span>Price</span><span>Size</span><span>Total (USDT)</span></div>
 			<div>
 				${asks.map(([p, q]) => `
-					<div class="tv-ob-row is-ask" data-price="${p}">
+					<div class="tv-ob-row is-ask" data-price="${p}" data-side="SHORT">
 						<div class="tv-ob-depth" style="width:${Math.min(100, (q / maxAsk) * 100).toFixed(1)}%"></div>
 						<span class="is-down">${formatPriceForSymbol(p, sym)}</span>
 						<span>${q.toFixed(3)}</span>
@@ -132,7 +145,7 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 			</div>
 			<div>
 				${bids.map(([p, q]) => `
-					<div class="tv-ob-row is-bid" data-price="${p}">
+					<div class="tv-ob-row is-bid" data-price="${p}" data-side="LONG">
 						<div class="tv-ob-depth" style="width:${Math.min(100, (q / maxBid) * 100).toFixed(1)}%"></div>
 						<span class="is-up">${formatPriceForSymbol(p, sym)}</span>
 						<span>${q.toFixed(3)}</span>
@@ -144,7 +157,7 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 
 		bodyEl.querySelectorAll('.tv-ob-row').forEach((row) => {
 			row.addEventListener('click', () => {
-				if (onPriceClick) onPriceClick(parseFloat(row.dataset.price));
+				onPriceClick?.(parseFloat(row.dataset.price), row.dataset.side || 'LONG');
 			});
 		});
 	}
@@ -158,13 +171,19 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 		bodyEl.innerHTML = `
 			<div class="tv-ob-cols"><span>Price</span><span>Size (USDT)</span><span>Time</span></div>
 			${trades.map((tr) => `
-				<div class="tv-ob-row tv-trade-row ${tr.usd >= 50000 ? 'is-whale' : ''}" data-price="${tr.price}">
+				<div class="tv-ob-row tv-trade-row ${tr.usd >= 50000 ? 'is-whale' : ''}" data-price="${tr.price}" data-side="${tr.isSell ? 'SHORT' : 'LONG'}">
 					<span class="${tr.isSell ? 'is-down' : 'is-up'}">${formatPriceForSymbol(tr.price, sym)}</span>
 					<span>${formatCompactUsd(tr.usd)}</span>
 					<span style="color:var(--text-secondary);">${tr.time}</span>
 				</div>
 			`).join('')}
 		`;
+
+		bodyEl.querySelectorAll('.tv-ob-row').forEach((row) => {
+			row.addEventListener('click', () => {
+				onPriceClick?.(parseFloat(row.dataset.price), row.dataset.side || 'LONG');
+			});
+		});
 	}
 
 	function render() {
@@ -175,18 +194,12 @@ export function createOrderBookPanel({ rootEl, getActiveSymbol, onPriceClick }) 
 	return {
 		setActive(isOpen) {
 			active = isOpen;
-			if (active) {
-				connect(getActiveSymbol());
-			} else {
-				disconnect();
-			}
+			if (active) connect(getActiveSymbol());
+			else disconnect();
 		},
 		onActiveSymbolChanged(sym) {
-			if (active && normalizeSymbol(sym) !== currentSym) {
-				connect(sym);
-			} else {
-				symLabelEl.textContent = formatDisplaySymbol(sym);
-			}
+			if (active && normalizeSymbol(sym) !== currentSym) connect(sym);
+			else symLabelEl.textContent = formatDisplaySymbol(sym);
 		},
 	};
 }

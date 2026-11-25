@@ -64,6 +64,8 @@ const DEFAULT_PAPER = {
 	history: [],
 };
 
+const DEFAULT_FAV_INTERVALS = ['1', '5', '15', '60', '240', '1D'];
+
 function readJSON(key, fallback) {
 	try {
 		const raw = localStorage.getItem(NS + key);
@@ -83,6 +85,14 @@ function writeJSON(key, value) {
 	}
 }
 
+function makeDefaultWatchlists() {
+	const legacySections = readJSON('watchlist', DEFAULT_WATCHLIST_SECTIONS);
+	const sections = Array.isArray(legacySections) && legacySections.length
+		? legacySections
+		: structuredClone(DEFAULT_WATCHLIST_SECTIONS);
+	return [{ id: 'default', name: 'Watchlist', sections }];
+}
+
 export const storage = {
 	getTheme() {
 		return readJSON('theme', 'dark') === 'light' ? 'light' : 'dark';
@@ -99,18 +109,33 @@ export const storage = {
 	},
 
 	getShowTickerTape() {
-		return Boolean(readJSON('showTickerTape', true));
+		return Boolean(readJSON('showTickerTape', false));
 	},
 	setShowTickerTape(val) {
 		writeJSON('showTickerTape', Boolean(val));
 	},
 
+	getShowBuySell() {
+		return Boolean(readJSON('showBuySell', true));
+	},
+	setShowBuySell(val) {
+		writeJSON('showBuySell', Boolean(val));
+	},
+
+	getFavoriteIntervals() {
+		const list = readJSON('favoriteIntervals', DEFAULT_FAV_INTERVALS);
+		return Array.isArray(list) && list.length ? list : [...DEFAULT_FAV_INTERVALS];
+	},
+	setFavoriteIntervals(list) {
+		writeJSON('favoriteIntervals', Array.isArray(list) && list.length ? list : [...DEFAULT_FAV_INTERVALS]);
+	},
+
 	getLayoutType() {
 		const v = readJSON('layoutType', '1');
-		return ['1', '2h', '2v', '4'].includes(v) ? v : '1';
+		return ['1', '2h', '2v', '3', '4'].includes(v) ? v : '1';
 	},
 	setLayoutType(type) {
-		writeJSON('layoutType', type);
+		writeJSON('layoutType', ['1', '2h', '2v', '3', '4'].includes(type) ? type : '1');
 	},
 
 	getSync() {
@@ -138,12 +163,39 @@ export const storage = {
 		writeJSON('savedLayouts', list);
 	},
 
+	getWatchlists() {
+		const lists = readJSON('watchlists', null);
+		if (Array.isArray(lists) && lists.length) return lists;
+		const migrated = makeDefaultWatchlists();
+		writeJSON('watchlists', migrated);
+		return migrated;
+	},
+	setWatchlists(lists) {
+		writeJSON('watchlists', lists);
+		if (Array.isArray(lists) && lists[0]?.sections) {
+			writeJSON('watchlist', lists[0].sections);
+		}
+	},
+
+	getActiveWatchlistId() {
+		return readJSON('activeWatchlistId', 'default');
+	},
+	setActiveWatchlistId(id) {
+		writeJSON('activeWatchlistId', id || 'default');
+	},
+
 	getWatchlist() {
-		const sections = readJSON('watchlist', DEFAULT_WATCHLIST_SECTIONS);
-		return Array.isArray(sections) && sections.length ? sections : structuredClone(DEFAULT_WATCHLIST_SECTIONS);
+		const lists = this.getWatchlists();
+		const activeId = this.getActiveWatchlistId();
+		const active = lists.find((w) => w.id === activeId) || lists[0];
+		return active.sections;
 	},
 	setWatchlist(sections) {
-		writeJSON('watchlist', sections);
+		const lists = this.getWatchlists();
+		const activeId = this.getActiveWatchlistId();
+		const active = lists.find((w) => w.id === activeId) || lists[0];
+		active.sections = sections;
+		this.setWatchlists(lists);
 	},
 
 	getAlerts() {

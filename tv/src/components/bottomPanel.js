@@ -1,7 +1,7 @@
 import { formatDisplaySymbol, formatPriceForSymbol, normalizeSymbol } from '../services/binanceApi.js';
 import { marketHub } from '../services/marketHub.js';
 import { storage } from '../services/storage.js';
-import { escapeHtml, formatCompactUsd, showToast } from './toast.js';
+import { escapeHtml, formatCompactUsd, getCoinAvatarHtml, showToast } from './toast.js';
 
 export function createBottomPanel({
 	rootEl,
@@ -18,6 +18,7 @@ export function createBottomPanel({
 	let screenerFilter = 'all'; // 'all' | 'gainers' | 'losers' | 'volume' | 'funding'
 	let screenerQuery = '';
 	let screenerSort = { col: 'quoteVolume', asc: false };
+	let ticketBuiltForSym = null;
 
 	rootEl.innerHTML = `
 		<div class="tv-bottom-tabs">
@@ -129,25 +130,25 @@ export function createBottomPanel({
 
 		const { equity, unrealized } = calcPortfolioStats();
 		const pnlSign = unrealized >= 0 ? '+' : '';
-		equityMiniEl.innerHTML = `Equity: <strong style="color:var(--text-primary);">$${equity.toFixed(2)}</strong> (<span class="${unrealized >= 0 ? 'is-up' : 'is-down'}">${pnlSign}$${unrealized.toFixed(2)}</span>)`;
+		equityMiniEl.innerHTML = `Equity: <strong style="color:var(--text-strong);">$${equity.toFixed(2)}</strong> (<span class="${unrealized >= 0 ? 'is-up' : 'is-down'}">${pnlSign}$${unrealized.toFixed(2)}</span>)`;
 	}
 
-	function placeOrder({ side, orderType, marginUsd, leverage, limitPrice, tp, sl }) {
-		const sym = getActiveSymbol();
+	function placeOrder({ symbol, side, orderType, marginUsd, leverage, limitPrice, tp, sl }) {
+		const sym = normalizeSymbol(symbol || getActiveSymbol());
 		const ticker = marketHub.getTicker(sym);
 		if (!ticker || !ticker.last) {
 			showToast({ title: 'No live price', message: 'Waiting for Binance ticker feed.', tone: 'warn' });
-			return;
+			return false;
 		}
-		if (marginUsd <= 0 || marginUsd > paper.balance) {
+		if (!Number.isFinite(marginUsd) || marginUsd <= 0 || marginUsd > paper.balance) {
 			showToast({ title: 'Insufficient Balance', message: `Available balance: $${paper.balance.toFixed(2)}`, tone: 'down' });
-			return;
+			return false;
 		}
 
 		if (orderType === 'LIMIT') {
 			if (!limitPrice || limitPrice <= 0) {
 				showToast({ title: 'Invalid Limit Price', tone: 'down' });
-				return;
+				return false;
 			}
 			paper.balance -= marginUsd;
 			paper.orders.unshift({
@@ -164,10 +165,11 @@ export function createBottomPanel({
 			savePaper();
 			renderActiveTab();
 			showToast({ title: 'Limit Order Placed', message: `${side} ${formatDisplaySymbol(sym)} @ ${formatPriceForSymbol(limitPrice, sym)}` });
-			return;
+			return true;
 		}
 
 		openPosition({ symbol: sym, side, entryPrice: ticker.last, marginUsd, leverage, tp, sl });
+		return true;
 	}
 
 	function openPosition({ symbol, side, entryPrice, marginUsd, leverage, tp, sl, alreadyDeducted = false }) {
@@ -231,12 +233,52 @@ export function createBottomPanel({
 		});
 	}
 
+	function reversePosition(posId) {
+		const pos = paper.positions.find((p) => p.id === posId);
+		if (!pos) return;
+		const nextSide = pos.side === 'LONG' ? 'SHORT' : 'LONG';
+		const t = marketHub.getTicker(pos.symbol);
+		const px = t ? t.last : pos.entryPrice;
+		const margin = pos.marginUsd;
+		const lev = pos.leverage;
+		closePosition(posId, px, 'Reversed');
+		if (paper.balance >= margin) {
+			openPosition({ symbol: pos.symbol, side: nextSide, entryPrice: px, marginUsd: margin, leverage: lev });
+		}
+	}
+
+	function updatePositionTpSl(posId, field, newPrice) {
+		const pos = paper.positions.find((p) => p.id === posId);
+		if (!pos) return;
+		pos[field] = newPrice === null ? null : Number(newPrice);
+		savePaper();
+		if (state.open && state.tab === 'trading') renderPaperTable();
+	}
+
+	function updateLimitOrderPrice(orderId, newPrice) {
+		const ord = paper.orders.find((o) => o.id === orderId);
+		const px = Number(newPrice);
+		if (!ord || !Number.isFinite(px) || px <= 0) return;
+		ord.limitPrice = px;
+		savePaper();
+		if (state.open && state.tab === 'trading') renderPaperTable();
+		showToast({ title: 'Order Modified', message: `${formatDisplaySymbol(ord.symbol)} @ ${formatPriceForSymbol(px, ord.symbol)}` });
+	}
+
+	function cancelLimitOrder(orderId) {
+		const idx = paper.orders.findIndex((o) => o.id === orderId);
+		if (idx === -1) return;
+		paper.balance += paper.orders[idx].marginUsd;
+		paper.orders.splice(idx, 1);
+		savePaper();
+		if (state.open && state.tab === 'trading') renderPaperTrading(true);
+	}
+
 	// Evaluate Limit Orders, TP, SL, and Liquidations on every live tick
 	marketHub.onTick((updated) => {
 		let mutated = false;
 		const pxMap = new Map(updated.map((u) => [u.symbol, u.last]));
 
-		// Check limit orders
 		for (let i = paper.orders.length - 1; i >= 0; i--) {
 			const ord = paper.orders[i];
 			const px = pxMap.get(ord.symbol);
@@ -258,7 +300,6 @@ export function createBottomPanel({
 			}
 		}
 
-		// Check open positions TP/SL/Liq
 		for (let i = paper.positions.length - 1; i >= 0; i--) {
 			const pos = paper.positions[i];
 			const px = pxMap.get(pos.symbol);
@@ -292,18 +333,36 @@ export function createBottomPanel({
 		if (mutated) savePaper();
 	});
 
-	function renderPaperTrading() {
+	function renderPaperTrading(forceTicketRebuild = false) {
 		const sym = getActiveSymbol();
 		const ticker = marketHub.getTicker(sym);
 		const lastPx = ticker ? ticker.last : 0;
 		const { unrealized, equity } = calcPortfolioStats();
 
+		const existingWrap = bodyEl.querySelector('.tv-pt-wrap');
+		if (existingWrap && !forceTicketRebuild && ticketBuiltForSym === sym) {
+			const lastEl = bodyEl.querySelector('#pt-ticket-last');
+			if (lastEl) lastEl.textContent = `Last: ${formatPriceForSymbol(lastPx, sym)}`;
+			const sumInfoEl = bodyEl.querySelector('#pt-summary-stats');
+			if (sumInfoEl) {
+				sumInfoEl.innerHTML = `
+					<span>Balance: <strong>$${paper.balance.toFixed(2)}</strong></span>
+					<span>Equity: <strong>$${equity.toFixed(2)}</strong></span>
+					<span>Unrealized PnL: <strong class="${unrealized >= 0 ? 'is-up' : 'is-down'}">${unrealized >= 0 ? '+' : ''}$${unrealized.toFixed(2)}</strong></span>
+					<span>Realized: <strong class="${paper.realizedPnl >= 0 ? 'is-up' : 'is-down'}">${paper.realizedPnl >= 0 ? '+' : ''}$${paper.realizedPnl.toFixed(2)}</strong></span>
+				`;
+			}
+			renderPaperTable();
+			return;
+		}
+
+		ticketBuiltForSym = sym;
 		bodyEl.innerHTML = `
 			<div class="tv-pt-wrap">
 				<div class="tv-pt-ticket">
 					<div style="display:flex;justify-content:space-between;align-items:center;">
 						<strong style="font-size:12px;">${formatDisplaySymbol(sym)}</strong>
-						<span style="font-size:11px;color:var(--text-secondary);">Last: ${formatPriceForSymbol(lastPx, sym)}</span>
+						<span id="pt-ticket-last" style="font-size:11px;color:var(--text-secondary);">Last: ${formatPriceForSymbol(lastPx, sym)}</span>
 					</div>
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
 						<select id="pt-type" class="tv-select">
@@ -316,6 +375,9 @@ export function createBottomPanel({
 					</div>
 					<input id="pt-limit" type="number" step="any" class="tv-input" placeholder="Limit Price (${lastPx || ''})" style="display:none;" />
 					<input id="pt-margin" type="number" step="any" class="tv-input" value="250" placeholder="Margin (USDT)" />
+					<div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;">
+						${[10, 25, 50, 100].map((pct) => `<button type="button" class="tv-chip-btn" data-pt-pct="${pct}" style="background:var(--bg-card);border:1px solid var(--border);">${pct}%</button>`).join('')}
+					</div>
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
 						<input id="pt-tp" type="number" step="any" class="tv-input" placeholder="Take Profit" />
 						<input id="pt-sl" type="number" step="any" class="tv-input" placeholder="Stop Loss" />
@@ -328,7 +390,7 @@ export function createBottomPanel({
 
 				<div class="tv-pt-main">
 					<div class="tv-pt-summary">
-						<div style="display:flex;gap:14px;flex-wrap:wrap;">
+						<div id="pt-summary-stats" style="display:flex;gap:14px;flex-wrap:wrap;">
 							<span>Balance: <strong>$${paper.balance.toFixed(2)}</strong></span>
 							<span>Equity: <strong>$${equity.toFixed(2)}</strong></span>
 							<span>Unrealized PnL: <strong class="${unrealized >= 0 ? 'is-up' : 'is-down'}">${unrealized >= 0 ? '+' : ''}$${unrealized.toFixed(2)}</strong></span>
@@ -338,6 +400,7 @@ export function createBottomPanel({
 							<button class="tv-chip-btn ${paperSubTab === 'positions' ? 'is-active' : ''}" data-pt-sub="positions">Positions (${paper.positions.length})</button>
 							<button class="tv-chip-btn ${paperSubTab === 'orders' ? 'is-active' : ''}" data-pt-sub="orders">Orders (${paper.orders.length})</button>
 							<button class="tv-chip-btn ${paperSubTab === 'history' ? 'is-active' : ''}" data-pt-sub="history">History (${paper.history.length})</button>
+							${paper.positions.length ? `<button id="pt-close-all" class="tv-btn-secondary" style="padding:3px 7px;font-size:11px;color:var(--down);">Close All</button>` : ''}
 							<button id="pt-reset" class="tv-btn-secondary" style="padding:3px 7px;font-size:11px;">Reset $10k</button>
 						</div>
 					</div>
@@ -358,8 +421,16 @@ export function createBottomPanel({
 			if (typeEl.value === 'LIMIT' && !limitEl.value && lastPx) limitEl.value = String(lastPx);
 		});
 
+		bodyEl.querySelectorAll('[data-pt-pct]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const pct = parseFloat(btn.dataset.ptPct) / 100;
+				marginEl.value = (paper.balance * pct).toFixed(2);
+			});
+		});
+
 		const submit = (side) => {
 			placeOrder({
+				symbol: sym,
 				side,
 				orderType: typeEl.value,
 				marginUsd: parseFloat(marginEl.value),
@@ -372,16 +443,21 @@ export function createBottomPanel({
 
 		bodyEl.querySelector('#pt-buy').addEventListener('click', () => submit('LONG'));
 		bodyEl.querySelector('#pt-sell').addEventListener('click', () => submit('SHORT'));
+		bodyEl.querySelector('#pt-close-all')?.addEventListener('click', () => {
+			for (let i = paper.positions.length - 1; i >= 0; i--) {
+				closePosition(paper.positions[i].id, null, 'Close All');
+			}
+		});
 		bodyEl.querySelector('#pt-reset').addEventListener('click', () => {
 			paper = storage.resetPaperTrading();
 			savePaper();
-			renderActiveTab();
+			renderPaperTrading(true);
 		});
 
 		bodyEl.querySelectorAll('[data-pt-sub]').forEach((b) => {
 			b.addEventListener('click', () => {
 				paperSubTab = b.dataset.ptSub;
-				renderPaperTrading();
+				renderPaperTrading(true);
 			});
 		});
 
@@ -394,7 +470,7 @@ export function createBottomPanel({
 
 		if (paperSubTab === 'positions') {
 			if (!paper.positions.length) {
-				wrap.innerHTML = `<div class="tv-empty-state">No open positions. Use the order ticket to place a simulated Long or Short.</div>`;
+				wrap.innerHTML = `<div class="tv-empty-state">No open positions. Use the order ticket or on-chart BUY/SELL buttons.</div>`;
 				return;
 			}
 			wrap.innerHTML = `
@@ -418,7 +494,10 @@ export function createBottomPanel({
 									<td style="color:var(--warn);">${formatPriceForSymbol(pos.liqPrice, pos.symbol)}</td>
 									<td>${pos.tp ? formatPriceForSymbol(pos.tp, pos.symbol) : '--'} / ${pos.sl ? formatPriceForSymbol(pos.sl, pos.symbol) : '--'}</td>
 									<td class="${cls}"><strong>${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}%)</strong></td>
-									<td><button class="tv-btn-secondary" data-close-pos="${pos.id}" style="padding:2px 8px;font-size:11px;">Close</button></td>
+									<td style="display:flex;gap:4px;">
+										<button class="tv-btn-secondary" data-rev-pos="${pos.id}" style="padding:2px 6px;font-size:11px;">Rev</button>
+										<button class="tv-btn-secondary" data-close-pos="${pos.id}" style="padding:2px 8px;font-size:11px;">Close</button>
+									</td>
 								</tr>
 							`;
 						}).join('')}
@@ -427,6 +506,9 @@ export function createBottomPanel({
 			`;
 			wrap.querySelectorAll('[data-close-pos]').forEach((btn) => {
 				btn.addEventListener('click', () => closePosition(btn.dataset.closePos));
+			});
+			wrap.querySelectorAll('[data-rev-pos]').forEach((btn) => {
+				btn.addEventListener('click', () => reversePosition(btn.dataset.revPos));
 			});
 			wrap.querySelectorAll('[data-goto-sym]').forEach((btn) => {
 				btn.addEventListener('click', () => onSelectSymbol(btn.dataset.gotoSym));
@@ -454,15 +536,7 @@ export function createBottomPanel({
 				</table>
 			`;
 			wrap.querySelectorAll('[data-cancel-ord]').forEach((btn) => {
-				btn.addEventListener('click', () => {
-					const idx = paper.orders.findIndex((o) => o.id === btn.dataset.cancelOrd);
-					if (idx !== -1) {
-						paper.balance += paper.orders[idx].marginUsd;
-						paper.orders.splice(idx, 1);
-						savePaper();
-						renderPaperTrading();
-					}
-				});
+				btn.addEventListener('click', () => cancelLimitOrder(btn.dataset.cancelOrd));
 			});
 		} else {
 			if (!paper.history.length) {
@@ -569,7 +643,7 @@ export function createBottomPanel({
 				<tbody>
 					${rows.map((r) => `
 						<tr data-sc-sym="${r.symbol}" style="cursor:pointer;">
-							<td><strong>${formatDisplaySymbol(r.symbol)}</strong></td>
+							<td><div style="display:flex;align-items:center;gap:7px;">${getCoinAvatarHtml(r.symbol, 16)}<strong>${formatDisplaySymbol(r.symbol)}</strong></div></td>
 							<td>${formatPriceForSymbol(r.last, r.symbol)}</td>
 							<td class="${r.chgPct >= 0 ? 'is-up' : 'is-down'}"><strong>${r.chgPct >= 0 ? '+' : ''}${r.chgPct.toFixed(2)}%</strong></td>
 							<td>${formatCompactUsd(r.quoteVolume)}</td>
@@ -630,7 +704,7 @@ export function createBottomPanel({
 
 	function renderActiveTab() {
 		if (!state.open) return;
-		if (state.tab === 'trading') renderPaperTrading();
+		if (state.tab === 'trading') renderPaperTrading(true);
 		else if (state.tab === 'screener') renderScreener();
 		else renderAlertLog();
 	}
@@ -638,20 +712,7 @@ export function createBottomPanel({
 	marketHub.onUpdate(() => {
 		updateBadges();
 		if (state.open && state.tab === 'trading' && paperSubTab === 'positions') {
-			renderPaperTable();
-			const sumEl = bodyEl.querySelector('.tv-pt-summary');
-			if (sumEl) {
-				const { unrealized, equity } = calcPortfolioStats();
-				const firstDiv = sumEl.firstElementChild;
-				if (firstDiv) {
-					firstDiv.innerHTML = `
-						<span>Balance: <strong>$${paper.balance.toFixed(2)}</strong></span>
-						<span>Equity: <strong>$${equity.toFixed(2)}</strong></span>
-						<span>Unrealized PnL: <strong class="${unrealized >= 0 ? 'is-up' : 'is-down'}">${unrealized >= 0 ? '+' : ''}$${unrealized.toFixed(2)}</strong></span>
-						<span>Realized: <strong class="${paper.realizedPnl >= 0 ? 'is-up' : 'is-down'}">${paper.realizedPnl >= 0 ? '+' : ''}$${paper.realizedPnl.toFixed(2)}</strong></span>
-					`;
-				}
-			}
+			renderPaperTrading(false);
 		} else if (state.open && state.tab === 'screener') {
 			const searchEl = bodyEl.querySelector('#sc-search');
 			if (document.activeElement !== searchEl) renderScreenerRows();
@@ -667,13 +728,54 @@ export function createBottomPanel({
 			state.tab = tab;
 			applyDrawerState();
 		},
+		toggleTab(tab) {
+			if (state.open && state.tab === tab) state.open = false;
+			else {
+				state.open = true;
+				state.tab = tab;
+			}
+			applyDrawerState();
+		},
+		isOpen: () => state.open,
 		refresh: () => {
 			updateBadges();
 			if (state.open) renderActiveTab();
 		},
 		getPaper: () => paper,
+		quickMarketOrder(side, marginUsd = 250) {
+			placeOrder({
+				symbol: getActiveSymbol(),
+				side,
+				orderType: 'MARKET',
+				marginUsd: Number(marginUsd) || 250,
+				leverage: 10,
+			});
+		},
+		prefillLimitOrder({ symbol, side = 'LONG', price }) {
+			state.open = true;
+			state.tab = 'trading';
+			applyDrawerState();
+			const typeEl = bodyEl.querySelector('#pt-type');
+			const limitEl = bodyEl.querySelector('#pt-limit');
+			const marginEl = bodyEl.querySelector('#pt-margin');
+			if (typeEl && limitEl) {
+				typeEl.value = 'LIMIT';
+				limitEl.style.display = 'block';
+				limitEl.value = String(Number(price));
+			}
+			marginEl?.focus();
+			showToast({
+				title: `Limit ${side} Prefilled`,
+				message: `${formatDisplaySymbol(symbol || getActiveSymbol())} @ ${formatPriceForSymbol(price, symbol || getActiveSymbol())}`,
+			});
+		},
+		closePosition,
+		reversePosition,
+		updatePositionTpSl,
+		updateLimitOrderPrice,
+		cancelLimitOrder,
 		onActiveSymbolChanged() {
-			if (state.open && state.tab === 'trading') renderPaperTrading();
+			if (state.open && state.tab === 'trading') renderPaperTrading(true);
 		},
 	};
 }

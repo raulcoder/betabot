@@ -8,6 +8,7 @@ import {
 	normalizeSymbol,
 	resolutionToBinance,
 } from './binanceApi.js';
+import { replayController } from './replayController.js';
 
 const subscriptions = new Map();
 
@@ -24,9 +25,16 @@ export function subscribeOnStream(symbolInfo, resolution, onRealtimeCallback, su
 		closed: false,
 		socket: null,
 		timer: null,
+		replayCb: null,
 		reconnectDelay: 1000,
 	};
 	subscriptions.set(subscriberUID, state);
+
+	if (!suffix && replayController.isActiveFor(symbol)) {
+		state.replayCb = onRealtimeCallback;
+		replayController.registerRealtimeCallback(onRealtimeCallback);
+		return;
+	}
 
 	if (suffix === '#OpenInterest') {
 		const period = clampFuturesStatPeriod(binanceInterval);
@@ -152,6 +160,10 @@ export function unsubscribeFromStream(subscriberUID) {
 	const state = subscriptions.get(subscriberUID);
 	if (!state) return;
 	state.closed = true;
+	if (state.replayCb) {
+		replayController.unregisterRealtimeCallback(state.replayCb);
+		state.replayCb = null;
+	}
 	if (state.timer !== null) {
 		clearInterval(state.timer);
 		state.timer = null;

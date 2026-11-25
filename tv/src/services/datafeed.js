@@ -12,6 +12,7 @@ import {
 	normalizeSymbol,
 	resolutionToBinance,
 } from './binanceApi.js';
+import { replayController } from './replayController.js';
 import { subscribeOnStream, unsubscribeFromStream } from './streaming.js';
 
 const SUPPORTED_RESOLUTIONS = ['1', '3', '5', '15', '30', '60', '120', '240', '360', '480', '720', '1D', '3D', '1W', '1M'];
@@ -231,8 +232,10 @@ export const Datafeed = {
 			}
 
 			// Standard OHLCV Futures klines with clean backward/chunked pagination
+			const replayActive = replayController.isActiveFor(symbol);
+			const replayCutoffMs = replayActive ? replayController.cutoffSec * 1000 : Infinity;
 			const allBars = [];
-			let cursorEnd = to * 1000;
+			let cursorEnd = Math.min(to * 1000, replayCutoffMs);
 			const startMs = from * 1000;
 			let safety = 0;
 
@@ -263,7 +266,9 @@ export const Datafeed = {
 			// Deduplicate and sort ascending
 			const dedupMap = new Map();
 			for (const b of allBars) {
-				dedupMap.set(b.time, b);
+				if (b.time <= replayCutoffMs) {
+					dedupMap.set(b.time, b);
+				}
 			}
 			const bars = Array.from(dedupMap.values()).sort((a, b) => a.time - b.time);
 			onHistoryCallback(bars, { noData: bars.length === 0 });
