@@ -1,94 +1,215 @@
-
-<div class="tradingview-widget-container">
-  <div class="tradingview-widget-container__widget"></div>
-  <div class="tradingview-widget-copyright"><a href="https://www.betabot.store/tv" rel="noopener" target="_blank"><span class="blue-text"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-  {
-  "symbols": [
-    {
-      "description": "",
-      "proName": "BINANCE:USDTBRL"
-    },
-    {
-      "description": "",
-      "proName": "BINANCE:BTCUSDT.P"
-    },
-    {
-      "description": "",
-      "proName": "BINANCE:ETHUSDT.P"
-    },
-    {
-      "description": "",
-      "proName": "BINANCE:BNBUSDT.P"
-    },
-    {
-      "description": "",
-      "proName": "BINANCE:SOLUSDT.P"
-    },
-    {
-      "description": "",
-      "proName": "BINANCE:ADAUSDT.P"
-    },
-    {
-      "description": "",
-      "proName": "BINANCE:LINKUSDT.P"
-    },
-    {
-      "description": "",
-      "proName": "BINANCE:XRPUSDT.P"
-    }
-  ],
-  "colorTheme": "dark",
-  "isTransparent": false,
-  "displayMode": "adaptive",
-  "locale": "pt"
-}
-  </script>
-</div>
-
-
-
-
-
-<!DOCTYPE HTML>
-<html>  
-    <head>
-        <title>Binance Futures Charts</title>
-        <script
-            type="text/javascript"
-            src="./charting_library_clonned_data/charting_library/charting_library.js">
-        </script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.2/socket.io.js"></script>
-        <script type="module" src="./src/main.js"></script>
-    </head>
-    <body style="margin:0px; overflow-y: hidden;">
-        <div id="tv_chart_container">
-        </div>
-    </body>
-</html>
-
-
-
-
-  <style>
-    /* Estilo para o ícone do Telegram flutuante */
-    .telegram-float {
-      position: fixed;
-      bottom: 20px; /* Ajuste a posição vertical conforme necessário */
-      right: 20px; /* Ajuste a posição horizontal conforme necessário */
-      z-index: 1000; /* Garante que o ícone esteja sempre visível */
-      cursor: pointer;
-      transition: transform 0.10s ease-in-out;
-    }
-
-    .telegram-float:hover {
-      transform: scale(1.1); /* Efeito de escala ao passar o mouse */
-    }
-  </style>
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>BetaBot TV — Binance Futures Supercharts</title>
+	<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='13' width='4' height='8' rx='1' fill='%232962FF'/%3E%3Crect x='10' y='7' width='4' height='14' rx='1' fill='%23089981'/%3E%3Crect x='18' y='3' width='4' height='18' rx='1' fill='%232962FF'/%3E%3C/svg%3E" />
+	<script>
+		(function () {
+			try {
+				var raw = localStorage.getItem('tv_betabot_v2_theme');
+				var theme = raw && JSON.parse(raw) === 'light' ? 'light' : 'dark';
+				document.documentElement.setAttribute('data-theme', theme);
+			} catch (e) {}
+		})();
+	</script>
+	<link rel="stylesheet" href="./src/styles/app.css" />
+	<script type="text/javascript" src="./charting_library_clonned_data/charting_library/charting_library.js"></script>
+	<script type="module" src="./src/main.js"></script>
 </head>
+<body>
+	<div class="tv-app">
+		<!-- Optional Live Binance Futures Ticker Tape -->
+		<div id="tv-ticker-tape" class="tv-ticker-tape" aria-label="Live Ticker Tape"></div>
 
- <!-- Ícone flutuante do Telegram -->
-  <a href="https://t.me/suportebetabot" target="_blank" class="telegram-float">
-    <img src="/telegram.png" alt="Telegram Icon" style="width: 50px; height: 50px;">
-  </a>
-</div>
+		<!-- Top Supercharts App Bar (38px) -->
+		<header class="tv-topbar">
+			<div class="tv-topbar-group">
+				<a href="https://www.betabot.store/tv" target="_blank" rel="noopener" class="tv-brand" title="BetaBot Futures Supercharts">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+						<rect x="2" y="13" width="4" height="8" rx="1" fill="#2962FF"/>
+						<rect x="10" y="7" width="4" height="14" rx="1" fill="#089981"/>
+						<rect x="18" y="3" width="4" height="18" rx="1" fill="#2962FF"/>
+					</svg>
+					<span>BetaTV</span>
+					<span id="ws-status-dot" class="tv-brand-dot" title="Binance WebSocket Status"></span>
+				</a>
+
+				<span class="tv-sep"></span>
+
+				<button id="btn-quick-search" class="tv-tb-btn tv-symbol-pill" title="Quick Search & Symbol Switcher (Ctrl+K)">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+					<span id="hdr-active-symbol">BTCUSDT.P</span>
+					<span class="tv-kbd">Ctrl+K</span>
+				</button>
+
+				<div class="tv-live-badge" title="Active Symbol 24h Live Price">
+					<span id="hdr-active-price">--</span>
+					<span id="hdr-active-chg" class="is-neutral">--</span>
+				</div>
+
+				<span class="tv-sep"></span>
+
+				<!-- Custom Futures Studies -->
+				<button id="btn-study-oi" class="tv-tb-btn" data-study="OpenInterest" title="Toggle Binance Open Interest">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-6"/></svg>
+					<span>OI</span>
+				</button>
+				<button id="btn-study-funding" class="tv-tb-btn" data-study="FundingRate" title="Toggle Binance Funding Rate %">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+					<span>Funding</span>
+				</button>
+				<button id="btn-study-ls" class="tv-tb-btn" data-study="LongShortRatio" title="Toggle Global Long/Short Ratio">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+					<span>L/S</span>
+				</button>
+
+				<span class="tv-sep"></span>
+
+				<button id="btn-new-alert" class="tv-tb-btn" title="Create Price Alert (Alt+A)">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+					<span>Alert</span>
+				</button>
+			</div>
+
+			<div class="tv-topbar-group">
+				<!-- Multi-Chart Layout Dropdown -->
+				<div class="tv-dropdown">
+					<button id="btn-layout-menu" class="tv-tb-btn" title="Select Multi-Chart Layout">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+						<span id="hdr-layout-label">1x1</span>
+					</button>
+					<div id="menu-layout" class="tv-menu is-right" style="min-width:230px;">
+						<div class="tv-menu-title">Chart Grid Layout</div>
+						<div class="tv-layout-grid-icons">
+							<button class="tv-layout-opt" data-layout-opt="1"><span>1x1</span><small>Single</small></button>
+							<button class="tv-layout-opt" data-layout-opt="2h"><span>2H</span><small>Side by side</small></button>
+							<button class="tv-layout-opt" data-layout-opt="2v"><span>2V</span><small>Stacked</small></button>
+							<button class="tv-layout-opt" data-layout-opt="4"><span>2x2</span><small>4 Charts</small></button>
+						</div>
+						<div class="tv-menu-divider"></div>
+						<div class="tv-menu-title">Sync in Layout</div>
+						<label class="tv-menu-item" style="cursor:pointer;">
+							<span>Sync Symbol</span>
+							<input id="chk-sync-symbol" type="checkbox" />
+						</label>
+						<label class="tv-menu-item" style="cursor:pointer;">
+							<span>Sync Interval</span>
+							<input id="chk-sync-interval" type="checkbox" />
+						</label>
+					</div>
+				</div>
+
+				<!-- Save / Load Layouts Dropdown -->
+				<div class="tv-dropdown">
+					<button id="btn-saveload-menu" class="tv-tb-btn" title="Save & Manage Chart Layouts">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+						<span>Save</span>
+					</button>
+					<div id="menu-saveload" class="tv-menu is-right" style="min-width:250px;">
+						<button id="btn-save-layout-now" class="tv-menu-item"><strong>+ Save Current Layout...</strong></button>
+						<button id="btn-export-layout" class="tv-menu-item"><span>Export Layout JSON</span></button>
+						<div class="tv-menu-divider"></div>
+						<div class="tv-menu-title">Saved Layouts</div>
+						<div id="saved-layouts-list"></div>
+					</div>
+				</div>
+
+				<span class="tv-sep"></span>
+
+				<button id="btn-ticker-toggle" class="tv-tb-btn is-icon" title="Toggle Top Ticker Tape">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="5" rx="1"/><rect x="2" y="12" width="20" height="8" rx="1"/></svg>
+				</button>
+
+				<button id="btn-locale-toggle" class="tv-tb-btn" title="Switch Language (PT / EN)">PT</button>
+
+				<button id="btn-theme-toggle" class="tv-tb-btn is-icon" title="Toggle Dark / Light Theme">
+					<svg id="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+					<svg id="icon-theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+				</button>
+
+				<button id="btn-snapshot" class="tv-tb-btn is-icon" title="Take Chart Snapshot">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+				</button>
+
+				<button id="btn-fullscreen" class="tv-tb-btn is-icon" title="Fullscreen Mode">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+				</button>
+			</div>
+		</header>
+
+		<!-- Main Workspace -->
+		<div class="tv-workspace">
+			<!-- Center Charts + Bottom Drawer -->
+			<main class="tv-center-col">
+				<div id="charts-grid" class="tv-charts-grid" data-layout="1"></div>
+				<div id="bottom-resizer" class="tv-bottom-resizer" style="display:none;"></div>
+				<section id="bottom-drawer" class="tv-bottom-drawer" aria-label="Trading & Screener Drawer"></section>
+			</main>
+
+			<!-- Right Panel Resize Handle -->
+			<div id="right-resizer" class="tv-right-resizer"></div>
+
+			<!-- Right Widgetbar Panel -->
+			<aside id="right-panel" class="tv-right-panel" aria-label="Market Panel">
+				<div id="view-watchlist" class="tv-panel-view is-active"></div>
+				<div id="view-alerts" class="tv-panel-view"></div>
+				<div id="view-orderbook" class="tv-panel-view"></div>
+				<div id="view-objects" class="tv-panel-view"></div>
+			</aside>
+
+			<!-- Far-Right Icon Rail (46px) -->
+			<nav class="tv-rail" aria-label="Workspace Tools">
+				<div class="tv-rail-group">
+					<button class="tv-rail-btn is-active" data-rail-tab="watchlist" title="Watchlist, Details & Technicals">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+					</button>
+					<button class="tv-rail-btn" data-rail-tab="alerts" title="Price Alerts">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+						<span id="rail-alerts-badge" class="tv-rail-badge" style="display:none;">0</span>
+					</button>
+					<button class="tv-rail-btn" data-rail-tab="orderbook" title="Live Order Book & Trades">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M4 15h10M4 11h16M4 7h12"/></svg>
+					</button>
+					<button class="tv-rail-btn" data-rail-tab="objects" title="Object Tree">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+					</button>
+
+					<div class="tv-rail-sep"></div>
+
+					<button id="rail-btn-screener" class="tv-rail-btn" title="Binance Futures Screener">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6M11 8v6"/></svg>
+					</button>
+					<button id="rail-btn-paper" class="tv-rail-btn" title="Paper Trading Simulator (Alt+T)">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+					</button>
+				</div>
+
+				<div class="tv-rail-group">
+					<button id="rail-btn-shortcuts" class="tv-rail-btn" title="Keyboard Shortcuts">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+					</button>
+					<a href="https://t.me/suportebetabot" target="_blank" rel="noopener" class="tv-rail-btn" title="BetaBot Support on Telegram">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+					</a>
+				</div>
+			</nav>
+		</div>
+	</div>
+
+	<!-- Reusable Modal Backdrop -->
+	<div id="tv-modal-backdrop" class="tv-modal-backdrop" role="dialog" aria-modal="true">
+		<div class="tv-modal">
+			<div class="tv-modal-hdr">
+				<span id="tv-modal-title">Modal</span>
+				<button id="tv-modal-close" class="tv-tb-btn is-icon" title="Close (Esc)">&times;</button>
+			</div>
+			<div id="tv-modal-body" class="tv-modal-body"></div>
+		</div>
+	</div>
+
+	<!-- Toast Notification Stack -->
+	<div id="toast-stack" class="tv-toast-stack" aria-live="polite"></div>
+</body>
+</html>
