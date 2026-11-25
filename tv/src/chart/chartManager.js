@@ -205,7 +205,6 @@ export class ChartManager {
 			locale: this.locale,
 			timezone: 'America/Sao_Paulo',
 			theme: isDark ? 'Dark' : 'Light',
-			toolbar_bg: isDark ? '#000000' : '#FFFFFF',
 			loading_screen: {
 				backgroundColor: isDark ? '#000000' : '#FFFFFF',
 				foregroundColor: '#2962FF',
@@ -475,13 +474,19 @@ export class ChartManager {
 	setTheme(theme) {
 		this.theme = theme === 'light' ? 'light' : 'dark';
 		storage.setTheme(this.theme);
-		const tvTheme = this.theme === 'dark' ? 'Dark' : 'Light';
+		const isDark = this.theme === 'dark';
+		const tvTheme = isDark ? 'Dark' : 'Light';
 		const overrides = getThemeOverrides(this.theme);
 
 		for (const inst of this.instances) {
 			if (!inst.ready) continue;
 			try {
 				inst.widget.changeTheme(tvTheme, { disableUndo: true });
+				const doc = inst.mountEl.querySelector('iframe')?.contentDocument;
+				if (doc?.documentElement) {
+					doc.documentElement.classList.toggle('theme-dark', isDark);
+					doc.documentElement.classList.toggle('theme-light', !isDark);
+				}
 				setTimeout(() => {
 					try { inst.widget.applyOverrides(overrides); } catch { /* ignore */ }
 				}, 250);
