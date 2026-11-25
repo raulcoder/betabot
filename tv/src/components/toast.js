@@ -90,7 +90,7 @@ export function getCoinAvatarHtml(symbol, size = 18) {
 	const letter = escapeHtml((base[0] || '?').toUpperCase());
 	const bg = avatarColorFor(base);
 	const fontSize = Math.max(9, Math.round(size * 0.54));
-	return `<span class="tv-coin-avatar" style="width:${size}px;height:${size}px;background:${bg};font-size:${fontSize}px;"><span>${letter}</span><img src="../icons/${encodeURIComponent(base)}.png" alt="" loading="lazy" onerror="this.remove()" /></span>`;
+	return `<span class="tv-coin-avatar" style="width:${size}px;height:${size}px;background:${bg};font-size:${fontSize}px;"><span>${letter}</span><img src="/icons/${encodeURIComponent(base)}.png" alt="" loading="lazy" onerror="this.remove()" /></span>`;
 }
 
 export function formatSplitPriceHtml(price, symbol, dir = 0) {
